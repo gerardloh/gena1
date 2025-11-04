@@ -5,7 +5,7 @@ echo "=========================================="
 echo "Clean install - removing everything first"
 echo "=========================================="
 
-pip uninstall -y torch torchvision transformers peft numpy accelerate pillow requests sentencepiece
+pip3 uninstall -y torch torchvision transformers peft numpy accelerate pillow requests sentencepiece
 
 echo ""
 echo "=========================================="
@@ -13,8 +13,8 @@ echo "Installing everything fresh"
 echo "=========================================="
 
 # Install in one go with compatible versions
-pip install torch==2.2.1 torchvision==0.17.1 --index-url https://download.pytorch.org/whl/cu118
-pip install transformers==4.45.0 peft==0.13.0 accelerate pillow requests sentencepiece "numpy<2.0"
+pip3 install torch==2.2.1 torchvision==0.17.1 --index-url https://download.pytorch.org/whl/cu118
+pip3 install transformers==4.45.0 peft==0.13.0 accelerate pillow requests sentencepiece "numpy<2.0"
 
 echo ""
 echo "=========================================="
@@ -31,4 +31,4 @@ print('✓ All imports successful!')
 "
 
 echo ""
-echo "Done! Run: python gpu_cluster_backend.py"
+echo "Done! Run: python3 gpu_cluster_backend.py"
