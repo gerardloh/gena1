@@ -1,10 +1,11 @@
 #!/bin/bash
 #SBATCH --job-name=vlm_inference
-#SBATCH --partition=gpu
+#SBATCH --partition=student
+#SBATCH --qos=studentqos
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
-#SBATCH --time=02:00:00
+#SBATCH --time=1-00:00:00
 #SBATCH --output=vlm_output_%j.log
 #SBATCH --error=vlm_error_%j.log
 
