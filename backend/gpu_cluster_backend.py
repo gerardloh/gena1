@@ -189,9 +189,8 @@ def main():
     """Main function to initialize and test the model"""
     
     # CONFIGURATION
-    # Use the exact base model that your adapter was trained on
-    BASE_MODEL = "unsloth/Qwen2.5-VL-7B-Instruct"  # Unsloth's version without quantization
-    ADAPTER_PATH = "."  # Current directory (update if needed)
+    BASE_MODEL = "Qwen/Qwen2.5-VL-7B-Instruct"
+    ADAPTER_PATH = "."  # Update this!
     
     print("=" * 60)
     print("Vision-Language Model - GPU Cluster Version")
