@@ -4,7 +4,7 @@ Optimized for CUDA GPUs with your LoRA adapter
 """
 
 import torch
-from transformers import AutoModelForVision2Seq, AutoProcessor
+from transformers import Qwen2VLForConditionalGeneration, AutoProcessor
 from peft import PeftModel
 import os
 from PIL import Image
@@ -40,13 +40,11 @@ class VisionLanguageModelGPU:
         print("   (First run will download model - may take a few minutes)")
         
         try:
-            # Use AutoModel to automatically detect the correct model class
-            self.model = AutoModelForVision2Seq.from_pretrained(
+            self.model = Qwen2VLForConditionalGeneration.from_pretrained(
                 base_model_name,
                 torch_dtype=torch.float16,  # Use FP16 for faster inference
                 device_map="auto",  # Automatically distribute across GPUs
-                trust_remote_code=True,
-                ignore_mismatched_sizes=True  # Allow minor size mismatches
+                trust_remote_code=True
             )
             print("✅ Base model loaded successfully")
             
