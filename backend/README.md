@@ -216,6 +216,34 @@ Carbon emissions can be estimated using the [Machine Learning Impact calculator]
 
 This repository contains scripts to load the Qwen2.5-VL-7B base model with your trained LoRA adapters and test the model to ensure your training weights are preserved.
 
+## 🚀 Quick Start (For Origami Cluster)
+
+1. **Update adapter path** in `load_and_test_model.py` (line 351):
+   ```python
+   ADAPTER_PATH = "./backend"  # Change to your actual path
+   ```
+
+2. **Make scripts executable**:
+   ```bash
+   chmod +x run_model_test.sh fix_pytorch_cuda.sh
+   mkdir -p logs
+   ```
+
+3. **Submit the job**:
+   ```bash
+   sbatch run_model_test.sh
+   ```
+
+4. **Check progress**:
+   ```bash
+   squeue -u $USER
+   tail -f logs/job_<JOBID>.out
+   ```
+
+That's it! The script handles everything automatically. ✅
+
+---
+
 ## Overview
 
 - **Base Model**: `unsloth/qwen2.5-vl-7b-instruct-bnb-4bit` (4-bit quantized)
@@ -254,84 +282,123 @@ safetensors>=0.4.0
 - CUDA 11.8+ or 12.x
 - Python 3.8+
 
-## Setup Instructions
+## Setup Instructions for Origami Cluster
 
 ### Step 1: Prepare Your Files
 
-1. **Update the adapter path** in `load_and_test_model.py`:
+1. **Upload all files** to your directory on the Origami cluster
+   - `load_and_test_model.py`
+   - `run_model_test.sh`
+   - `fix_pytorch_cuda.sh`
+   - `requirements.txt`
+
+2. **Update the adapter path** in `load_and_test_model.py`:
    ```python
-   # Line ~353 - Update this path to point to your adapter directory
+   # Line ~351 - Update this path to point to your adapter directory
    ADAPTER_PATH = "./backend"  # Change to your actual path
    ```
 
-2. Your adapter directory should contain:
+3. **Verify your adapter directory** contains:
    - `adapter_config.json`
    - `adapter_model.safetensors` (or `adapter_model.bin`)
    - Other adapter-related files
 
-### Step 2: Install Dependencies
-
-On the Origami cluster or your local machine:
+### Step 2: Make Scripts Executable
 
 ```bash
-# Using pip
-pip install --break-system-packages -r requirements.txt
+chmod +x run_model_test.sh
+chmod +x fix_pytorch_cuda.sh
+```
 
-# Or if you're in a virtual environment
-pip install -r requirements.txt
+### Step 3: Create Logs Directory
+
+```bash
+mkdir -p logs
 ```
 
 ## Running the Script
 
-### Option 1: SLURM Job Submission (Recommended for Origami Cluster)
+### Recommended Method: SLURM Job Submission
 
-1. **Make the script executable**:
-   ```bash
-   chmod +x run_model_test.sh
-   ```
+This is the **easiest and recommended** way to run on the Origami cluster:
 
-2. **Create logs directory**:
-   ```bash
-   mkdir -p logs
-   ```
-
-3. **Submit the job**:
+1. **Submit the job**:
    ```bash
    sbatch run_model_test.sh
    ```
 
-4. **Check job status**:
+2. **Check job status**:
    ```bash
    squeue -u $USER
    ```
 
-5. **View output**:
+3. **View output in real-time** (while job is running):
    ```bash
-   # Real-time monitoring
+   # Replace <JOBID> with your actual job ID from squeue
    tail -f logs/job_<JOBID>.out
-   
-   # View after completion
+   ```
+
+4. **View output after completion**:
+   ```bash
    cat logs/job_<JOBID>.out
    ```
 
-### Option 2: Direct Execution (Local or Interactive Node)
+The SLURM script automatically:
+- ✅ Requests GPU access (1 GPU, 4 CPUs, 32GB RAM)
+- ✅ Loads Python module
+- ✅ Installs correct PyTorch version (CUDA 12.1)
+- ✅ Installs all required packages
+- ✅ Runs the model test
 
-1. **Make the script executable**:
+### Alternative Method: Interactive GPU Session
+
+If you want to run interactively and see output in real-time:
+
+1. **Request an interactive GPU node**:
    ```bash
-   chmod +x setup_and_run.sh
+   srun --account=is469 --partition=student --qos=studentqos --gres=gpu:1 --cpus-per-task=4 --mem=32G --time=04:00:00 --pty bash
    ```
 
-2. **Run the script**:
+2. **Load Python module**:
    ```bash
-   ./setup_and_run.sh
+   module load Python/3.12.8-GCCcore-13.3.0
    ```
 
-   Or run directly with Python:
+3. **Fix PyTorch CUDA compatibility** (first time only):
+   ```bash
+   ./fix_pytorch_cuda.sh
+   ```
+
+4. **Run the model test**:
    ```bash
    python3 load_and_test_model.py
    ```
 
+### If You Get CUDA Errors
+
+If you see errors like "CUDA error: no kernel image is available", run the fix script:
+
+```bash
+# On an interactive GPU node:
+./fix_pytorch_cuda.sh
+
+# Then try again:
+python3 load_and_test_model.py
+```
+
 ## Configuration Options
+
+### Origami Cluster Account Limits
+
+Your account (`is469`) has these limits:
+- **Max GPUs per job**: 1
+- **Max CPUs per job**: 4
+- **Max RAM per job**: 32GB
+- **Max job time**: 1 day (24 hours)
+- **Max running jobs**: 2
+- **Max submitted jobs**: 4
+- **Partition**: student
+- **QOS**: studentqos
 
 ### In `load_and_test_model.py`:
 
@@ -340,27 +407,36 @@ pip install -r requirements.txt
    BASE_MODEL = "unsloth/qwen2.5-vl-7b-instruct-bnb-4bit"
    ```
 
-2. **Adapter Path** (Line ~351):
+2. **Adapter Path** (Line ~351) - **IMPORTANT: UPDATE THIS!**:
    ```python
-   ADAPTER_PATH = "./backend"  # Update this!
+   ADAPTER_PATH = "./backend"  # Change to your actual adapter directory path!
+   # Examples:
+   # ADAPTER_PATH = "/home/gerard.loh.2022/backend"
+   # ADAPTER_PATH = "./my_adapters"
    ```
 
 3. **Test Image** (Line ~354):
    ```python
    TEST_IMAGE = None  # Set to image path to test vision capabilities
-   TEST_IMAGE = "./test_image.jpg"  # Example
+   # Example:
+   # TEST_IMAGE = "./test_image.jpg"
    ```
 
 ### In `run_model_test.sh`:
 
-Adjust SLURM parameters based on your needs:
+The SLURM script is already configured with your account limits:
 
 ```bash
-#SBATCH --gres=gpu:1              # Number of GPUs (1 is usually enough)
-#SBATCH --cpus-per-task=4         # CPU cores
-#SBATCH --mem=32G                 # Memory (increase if needed)
-#SBATCH --time=01:00:00           # Time limit
+#SBATCH --account=is469           # Your account
+#SBATCH --partition=student       # Student partition
+#SBATCH --qos=studentqos          # Student QOS
+#SBATCH --gres=gpu:1              # 1 GPU (max allowed)
+#SBATCH --cpus-per-task=4         # 4 CPUs (max allowed)
+#SBATCH --mem=32G                 # 32GB RAM (max allowed)
+#SBATCH --time=23:59:00           # Almost 1 day
 ```
+
+**Note**: You can reduce these values if you want, but cannot exceed them.
 
 ## Expected Output
 
@@ -430,31 +506,61 @@ Your fine-tuned model is working! Training weights are preserved.
 
 ## Troubleshooting
 
+### Issue: "CUDA error: no kernel image is available"
+**Solution**: PyTorch version doesn't match GPU CUDA version.
+```bash
+# On an interactive GPU node:
+./fix_pytorch_cuda.sh
+```
+Or just resubmit the job - the updated `run_model_test.sh` fixes this automatically.
+
+### Issue: "CUDA is not available" or running on CPU
+**Solution**: You're on the login node. You need GPU access:
+```bash
+# Submit as SLURM job (recommended):
+sbatch run_model_test.sh
+
+# OR request interactive GPU:
+srun --account=is469 --partition=student --qos=studentqos --gres=gpu:1 --mem=32G --time=04:00:00 --pty bash
+```
+
 ### Issue: "Adapter path does not exist"
-**Solution**: Update the `ADAPTER_PATH` variable in `load_and_test_model.py` to point to your actual adapter directory.
+**Solution**: Update the `ADAPTER_PATH` variable in `load_and_test_model.py` (line 351) to point to your actual adapter directory.
+```python
+# Use absolute path if needed:
+ADAPTER_PATH = "/home/gerard.loh.2022/backend"
+```
 
 ### Issue: "Missing required adapter files"
 **Solution**: Ensure your adapter directory contains:
 - `adapter_config.json`
 - `adapter_model.safetensors` (or `adapter_model.bin`)
 
-### Issue: "CUDA out of memory"
-**Solution**: 
-- Increase memory allocation in SLURM script (`--mem=64G`)
-- Reduce batch size or generation length
-- Use a node with more GPU memory
-
-### Issue: "Module not found"
-**Solution**: Install missing packages:
+### Issue: "pip: command not found"
+**Solution**: Load the Python module first:
 ```bash
-pip install --break-system-packages <package_name>
+module load Python/3.12.8-GCCcore-13.3.0
 ```
 
-### Issue: Model loads but generation fails
-**Solution**: 
-- Check adapter compatibility with base model
-- Verify `adapter_config.json` is valid
-- Try with a simpler prompt
+### Issue: "torchvision not found"
+**Solution**: Install it:
+```bash
+pip install --break-system-packages torchvision
+```
+Or rerun the SLURM script - it now installs torchvision automatically.
+
+### Issue: Job queue is full / "Max submitted jobs reached"
+**Solution**: You can only submit 4 jobs at a time and run 2 simultaneously. Wait for current jobs to complete:
+```bash
+squeue -u $USER
+scancel <JOBID>  # Cancel a job if needed
+```
+
+### Issue: "CUDA out of memory"
+**Solution**: The 4-bit quantized model should fit in most GPUs. If you still get this error:
+- Make sure you're requesting the full 32GB RAM (`--mem=32G`)
+- Close any other processes using the GPU
+- Try reducing `max_new_tokens` in the generation parameters
 
 ## Testing with Images
 
