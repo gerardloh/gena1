@@ -1,634 +1,441 @@
----
-base_model: ''
-library_name: peft
-pipeline_tag: text-generation
-tags:
-- base_model:adapter:unsloth/qwen2.5-vl-7b-instruct-bnb-4bit
-- lora
-- sft
-- transformers
-- trl
-- unsloth
----
+# Qwen2.5-VL Chatbot Frontend & Backend
 
-# Model Card for Model ID
+Complete chatbot interface for interacting with your fine-tuned Qwen2.5-VL model with LoRA adapters.
 
-<!-- Provide a quick summary of what the model is/does. -->
+## 🎨 Features
 
+- ✅ **Text + Image Input**: Send text messages with optional image attachments
+- ✅ **Vision-Language AI**: Process images and answer questions about them
+- ✅ **Real-time Chat**: Modern chat interface with typing indicators
+- ✅ **Configurable**: Adjust model parameters (temperature, max tokens)
+- ✅ **Beautiful UI**: Gradient design with smooth animations
+- ✅ **Easy Deployment**: Simple setup on Origami cluster
 
+## 📁 Files Included
 
-## Model Details
+1. **backend_api.py** - Flask API server that runs the model
+2. **run_api_server.sh** - SLURM script to deploy API on GPU
+3. **chatbot.html** - Standalone web interface (no build needed!)
+4. **ChatbotUI.jsx** - React component (optional, for advanced users)
 
-### Model Description
+## 🚀 Quick Start
 
-<!-- Provide a longer summary of what this model is. -->
+### Step 1: Update the Adapter Path
 
-
-
-- **Developed by:** [More Information Needed]
-- **Funded by [optional]:** [More Information Needed]
-- **Shared by [optional]:** [More Information Needed]
-- **Model type:** [More Information Needed]
-- **Language(s) (NLP):** [More Information Needed]
-- **License:** [More Information Needed]
-- **Finetuned from model [optional]:** [More Information Needed]
-
-### Model Sources [optional]
-
-<!-- Provide the basic links for the model. -->
-
-- **Repository:** [More Information Needed]
-- **Paper [optional]:** [More Information Needed]
-- **Demo [optional]:** [More Information Needed]
-
-## Uses
-
-<!-- Address questions around how the model is intended to be used, including the foreseeable users of the model and those affected by the model. -->
-
-### Direct Use
-
-<!-- This section is for the model use without fine-tuning or plugging into a larger ecosystem/app. -->
-
-[More Information Needed]
-
-### Downstream Use [optional]
-
-<!-- This section is for the model use when fine-tuned for a task, or when plugged into a larger ecosystem/app -->
-
-[More Information Needed]
-
-### Out-of-Scope Use
-
-<!-- This section addresses misuse, malicious use, and uses that the model will not work well for. -->
-
-[More Information Needed]
-
-## Bias, Risks, and Limitations
-
-<!-- This section is meant to convey both technical and sociotechnical limitations. -->
-
-[More Information Needed]
-
-### Recommendations
-
-<!-- This section is meant to convey recommendations with respect to the bias, risk, and technical limitations. -->
-
-Users (both direct and downstream) should be made aware of the risks, biases and limitations of the model. More information needed for further recommendations.
-
-## How to Get Started with the Model
-
-Use the code below to get started with the model.
-
-[More Information Needed]
-
-## Training Details
-
-### Training Data
-
-<!-- This should link to a Dataset Card, perhaps with a short stub of information on what the training data is all about as well as documentation related to data pre-processing or additional filtering. -->
-
-[More Information Needed]
-
-### Training Procedure
-
-<!-- This relates heavily to the Technical Specifications. Content here should link to that section when it is relevant to the training procedure. -->
-
-#### Preprocessing [optional]
-
-[More Information Needed]
-
-
-#### Training Hyperparameters
-
-- **Training regime:** [More Information Needed] <!--fp32, fp16 mixed precision, bf16 mixed precision, bf16 non-mixed precision, fp16 non-mixed precision, fp8 mixed precision -->
-
-#### Speeds, Sizes, Times [optional]
-
-<!-- This section provides information about throughput, start/end time, checkpoint size if relevant, etc. -->
-
-[More Information Needed]
-
-## Evaluation
-
-<!-- This section describes the evaluation protocols and provides the results. -->
-
-### Testing Data, Factors & Metrics
-
-#### Testing Data
-
-<!-- This should link to a Dataset Card if possible. -->
-
-[More Information Needed]
-
-#### Factors
-
-<!-- These are the things the evaluation is disaggregating by, e.g., subpopulations or domains. -->
-
-[More Information Needed]
-
-#### Metrics
-
-<!-- These are the evaluation metrics being used, ideally with a description of why. -->
-
-[More Information Needed]
-
-### Results
-
-[More Information Needed]
-
-#### Summary
-
-
-
-## Model Examination [optional]
-
-<!-- Relevant interpretability work for the model goes here -->
-
-[More Information Needed]
-
-## Environmental Impact
-
-<!-- Total emissions (in grams of CO2eq) and additional considerations, such as electricity usage, go here. Edit the suggested text below accordingly -->
-
-Carbon emissions can be estimated using the [Machine Learning Impact calculator](https://mlco2.github.io/impact#compute) presented in [Lacoste et al. (2019)](https://arxiv.org/abs/1910.09700).
-
-- **Hardware Type:** [More Information Needed]
-- **Hours used:** [More Information Needed]
-- **Cloud Provider:** [More Information Needed]
-- **Compute Region:** [More Information Needed]
-- **Carbon Emitted:** [More Information Needed]
-
-## Technical Specifications [optional]
-
-### Model Architecture and Objective
-
-[More Information Needed]
-
-### Compute Infrastructure
-
-[More Information Needed]
-
-#### Hardware
-
-[More Information Needed]
-
-#### Software
-
-[More Information Needed]
-
-## Citation [optional]
-
-<!-- If there is a paper or blog post introducing the model, the APA and Bibtex information for that should go in this section. -->
-
-**BibTeX:**
-
-[More Information Needed]
-
-**APA:**
-
-[More Information Needed]
-
-## Glossary [optional]
-
-<!-- If relevant, include terms and calculations in this section that can help readers understand the model or model card. -->
-
-[More Information Needed]
-
-## More Information [optional]
-
-[More Information Needed]
-
-## Model Card Authors [optional]
-
-[More Information Needed]
-
-## Model Card Contact
-
-[More Information Needed]
-### Framework versions
-
-- PEFT 0.17.1
-
-
-
-
-# Qwen2.5-VL LoRA Model Loading and Testing
-
-This repository contains scripts to load the Qwen2.5-VL-7B base model with your trained LoRA adapters and test the model to ensure your training weights are preserved.
-
-## 🚀 Quick Start (For Origami Cluster)
-
-1. **Update adapter path** in `load_and_test_model.py` (line 351):
-   ```python
-   ADAPTER_PATH = "./backend"  # Change to your actual path
-   ```
-
-2. **Make scripts executable**:
-   ```bash
-   chmod +x run_model_test.sh fix_pytorch_cuda.sh
-   mkdir -p logs
-   ```
-
-3. **Submit the job**:
-   ```bash
-   sbatch run_model_test.sh
-   ```
-
-4. **Check progress**:
-   ```bash
-   squeue -u $USER
-   tail -f logs/job_<JOBID>.out
-   ```
-
-That's it! The script handles everything automatically. ✅
-
----
-
-## Overview
-
-- **Base Model**: `unsloth/qwen2.5-vl-7b-instruct-bnb-4bit` (4-bit quantized)
-- **LoRA Adapters**: Your fine-tuned adapters from the `backend` directory
-- **Testing**: Automated tests to verify the model works correctly
-
-## Files Included
-
-1. **load_and_test_model.py** - Main Python script that:
-   - Loads the base model with 4-bit quantization
-   - Connects your LoRA adapters
-   - Tests text generation
-   - (Optional) Tests vision-language generation
-
-2. **run_model_test.sh** - SLURM job submission script for the Origami GPU cluster
-
-3. **setup_and_run.sh** - Simple bash script for local testing (without SLURM)
-
-4. **requirements.txt** - Python dependencies
-
-## Prerequisites
-
-### Python Packages
-```bash
-torch>=2.0.0
-transformers>=4.40.0
-accelerate>=0.27.0
-peft>=0.9.0
-bitsandbytes>=0.42.0
-pillow>=10.0.0
-safetensors>=0.4.0
+Edit `backend_api.py` (line 24):
+```python
+ADAPTER_PATH = "./backend"  # Change to your actual adapter path
 ```
 
-### System Requirements
-- CUDA-capable GPU (recommended: 16GB+ VRAM)
-- CUDA 11.8+ or 12.x
-- Python 3.8+
-
-## Setup Instructions for Origami Cluster
-
-### Step 1: Prepare Your Files
-
-1. **Upload all files** to your directory on the Origami cluster
-   - `load_and_test_model.py`
-   - `run_model_test.sh`
-   - `fix_pytorch_cuda.sh`
-   - `requirements.txt`
-
-2. **Update the adapter path** in `load_and_test_model.py`:
-   ```python
-   # Line ~351 - Update this path to point to your adapter directory
-   ADAPTER_PATH = "./backend"  # Change to your actual path
-   ```
-
-3. **Verify your adapter directory** contains:
-   - `adapter_config.json`
-   - `adapter_model.safetensors` (or `adapter_model.bin`)
-   - Other adapter-related files
-
-### Step 2: Make Scripts Executable
+### Step 2: Start the Backend API
 
 ```bash
-chmod +x run_model_test.sh
-chmod +x fix_pytorch_cuda.sh
-```
+# Make script executable
+chmod +x run_api_server.sh
 
-### Step 3: Create Logs Directory
-
-```bash
+# Create logs directory
 mkdir -p logs
+
+# Submit the job to GPU
+sbatch run_api_server.sh
+
+# Check job status
+squeue -u $USER
+
+# Get the server URL from logs
+tail -f logs/api_<JOBID>.out
+# Look for: "Server will be accessible at: http://X.X.X.X:5000"
 ```
 
-## Running the Script
+### Step 3: Create SSH Tunnel (Important!)
 
-### Recommended Method: SLURM Job Submission
+The GPU server is on an internal network, so you need an SSH tunnel to access it from your computer.
 
-This is the **easiest and recommended** way to run on the Origami cluster:
+**On your local computer** (NOT on Origami), open a new terminal and run:
 
-1. **Submit the job**:
-   ```bash
-   sbatch run_model_test.sh
-   ```
+```bash
+# Replace with your actual Origami login hostname
+ssh -L 5000:10.2.1.35:5000 gerard.loh.2022@origami.scis.smu.edu.sg
+```
 
-2. **Check job status**:
+**Important Notes:**
+- Keep this terminal window **open** while using the chatbot
+- If you get a hostname error, use the same hostname you normally use to SSH into Origami
+- Replace `10.2.1.35` with your actual GPU node IP from Step 2
+- The tunnel maps your local `localhost:5000` to the GPU server
+
+### Step 4: Open the Frontend
+
+1. **Download `chatbot.html`** to your local computer
+2. **Open it in a web browser** (Chrome, Firefox, Edge, Safari)
+3. **Update the API URL** in Settings:
+   - Click the settings icon (⚙️)
+   - Change API URL to: `http://localhost:5000`
+   - Click "Save Settings"
+
+### Step 5: Start Chatting!
+
+- Type a message and press Enter or click Send
+- Upload an image using the image icon (📷)
+- Ask questions about the uploaded image
+- Get responses from your fine-tuned model
+
+## 📋 Backend API Details
+
+### Endpoints
+
+**POST /chat**
+- Send messages to the model
+- Request body:
+  ```json
+  {
+    "message": "What's in this image?",
+    "image": "data:image/jpeg;base64,/9j/4AAQ..." // optional
+  }
+  ```
+- Response:
+  ```json
+  {
+    "response": "This image shows a cat...",
+    "timestamp": "2025-11-05T12:34:56"
+  }
+  ```
+
+**GET /health**
+- Check if server is running
+- Response:
+  ```json
+  {
+    "status": "healthy",
+    "model_loaded": true,
+    "device": "cuda"
+  }
+  ```
+
+**GET /config**
+- Get current model settings
+
+**POST /config**
+- Update model parameters
+- Request body:
+  ```json
+  {
+    "max_new_tokens": 512,
+    "temperature": 0.7,
+    "top_p": 0.9
+  }
+  ```
+
+### Resource Requirements
+
+- **GPU**: 1 GPU (required)
+- **RAM**: 32GB
+- **CPUs**: 4 cores
+- **Time**: Up to 24 hours
+
+## 🎨 Frontend Options
+
+### Option 1: Standalone HTML (Recommended)
+
+**File**: `chatbot.html`
+
+**Pros**:
+- ✅ No installation needed
+- ✅ Works immediately in any browser
+- ✅ Easy to customize
+- ✅ Can run from USB drive or local file
+
+**Usage**:
+1. Download the HTML file
+2. Double-click to open in browser
+3. Update API URL in settings
+4. Start chatting!
+
+### Option 2: React Component
+
+**File**: `ChatbotUI.jsx`
+
+**Pros**:
+- ✅ Better for integration into existing React apps
+- ✅ More maintainable for large projects
+
+**Setup**:
+```bash
+# In your React project:
+npm install lucide-react
+
+# Copy ChatbotUI.jsx to your src/components folder
+# Import and use:
+import ChatbotUI from './components/ChatbotUI';
+function App() {
+  return <ChatbotUI />;
+}
+```
+
+## 🔧 Configuration
+
+### Backend Configuration
+
+Edit `backend_api.py`:
+
+```python
+# Model settings (lines 22-28)
+BASE_MODEL = "unsloth/qwen2.5-vl-7b-instruct-bnb-4bit"
+ADAPTER_PATH = "./backend"  # Your adapter path
+
+# Generation settings
+MAX_NEW_TOKENS = 512    # Maximum response length
+TEMPERATURE = 0.7        # Randomness (0.1-1.0)
+TOP_P = 0.9             # Nucleus sampling
+```
+
+### Frontend Configuration
+
+In the web interface:
+1. Click Settings icon (⚙️)
+2. Adjust:
+   - **API URL**: Backend server address
+   - **Max Tokens**: Response length (128-2048)
+   - **Temperature**: Response randomness (0.1-2.0)
+
+## 📝 Usage Examples
+
+### Text-Only Chat
+
+```
+You: What is the capital of France?
+AI: The capital of France is Paris. It is located in the north-central...
+```
+
+### Image Description
+
+```
+You: [uploads photo of a cat] What's in this image?
+AI: This image shows a tabby cat sitting on a windowsill. The cat appears...
+```
+
+### Image + Specific Question
+
+```
+You: [uploads chart] What are the key trends shown in this chart?
+AI: Based on the chart, there are three main trends: 1) Sales increased...
+```
+
+## 🔍 Monitoring
+
+### Check Backend Status
+
+```bash
+# View API logs
+tail -f logs/api_<JOBID>.out
+
+# Check if model is loaded
+curl http://<NODE_IP>:5000/health
+
+# Test the API
+curl -X POST http://<NODE_IP>:5000/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Hello!"}'
+```
+
+### Check Resource Usage
+
+```bash
+# View GPU usage
+srun --account=is469 --partition=student --qos=studentqos \
+     --gres=gpu:1 --jobid=<JOBID> nvidia-smi
+
+# View job info
+sacct -j <JOBID> --format=JobID,JobName,State,Elapsed,MaxRSS,MaxVMSize
+```
+
+## 🛠️ Troubleshooting
+
+### Issue: "Unable to connect to server"
+
+**Symptoms**: Red error message in chat
+
+**Solutions**:
+
+1. **Check if backend is running:**
    ```bash
    squeue -u $USER
    ```
 
-3. **View output in real-time** (while job is running):
+2. **Verify SSH tunnel is active:**
+   - Make sure the SSH tunnel terminal is still open
+   - Test tunnel: `curl http://localhost:5000/health`
+   - If no response, recreate the tunnel
+
+3. **Check API URL in Settings:**
+   - Should be `http://localhost:5000` (when using SSH tunnel)
+   - NOT `http://10.2.1.35:5000` (internal IP won't work from outside)
+
+4. **Test backend directly on cluster:**
    ```bash
-   # Replace <JOBID> with your actual job ID from squeue
-   tail -f logs/job_<JOBID>.out
+   ssh origami
+   curl http://10.2.1.35:5000/health
    ```
 
-4. **View output after completion**:
+5. **Check firewall/network settings**
+
+6. **Look at backend logs for errors:**
    ```bash
-   cat logs/job_<JOBID>.out
+   cat logs/api_<JOBID>.err
    ```
 
-The SLURM script automatically:
-- ✅ Requests GPU access (1 GPU, 4 CPUs, 32GB RAM)
-- ✅ Loads Python module
-- ✅ Installs correct PyTorch version (CUDA 12.1)
-- ✅ Installs all required packages
-- ✅ Runs the model test
+### Issue: "Could not resolve hostname" when creating SSH tunnel
 
-### Alternative Method: Interactive GPU Session
+**Solutions**:
+- Check what hostname you normally use to SSH into Origami
+- Try common variations:
+  - `origami.scis.smu.edu.sg`
+  - `violet.scis.smu.edu.sg`
+  - `origami.smu.edu.sg`
+- Use the same hostname from your regular SSH login
 
-If you want to run interactively and see output in real-time:
+### Issue: SSH tunnel disconnects
 
-1. **Request an interactive GPU node**:
+**Solutions**:
+- The tunnel will disconnect if the SSH session times out
+- Add to your `~/.ssh/config`:
+  ```
+  Host origami
+      ServerAliveInterval 60
+      ServerAliveCountMax 3
+  ```
+- Or use `autossh` for persistent tunnels:
+  ```bash
+  autossh -M 0 -L 5000:10.2.1.35:5000 user@origami
+  ```
+
+### Issue: Backend crashes or stops
+
+**Solutions**:
+1. Check error logs:
    ```bash
-   srun --account=is469 --partition=student --qos=studentqos --gres=gpu:1 --cpus-per-task=4 --mem=32G --time=04:00:00 --pty bash
+   cat logs/api_<JOBID>.err
    ```
+2. Common causes:
+   - Out of GPU memory → Reduce max_new_tokens
+   - Job time limit reached → Resubmit job
+   - CUDA error → Check PyTorch installation
 
-2. **Load Python module**:
-   ```bash
-   module load Python/3.12.8-GCCcore-13.3.0
-   ```
+### Issue: Slow responses
 
-3. **Fix PyTorch CUDA compatibility** (first time only):
-   ```bash
-   ./fix_pytorch_cuda.sh
-   ```
+**Causes**:
+- Large images (resize to 1024x1024 max)
+- High max_new_tokens (reduce to 256-512)
+- Multiple users (GPU is shared)
 
-4. **Run the model test**:
-   ```bash
-   python3 load_and_test_model.py
-   ```
+**Solutions**:
+1. Reduce image size before uploading
+2. Lower max_new_tokens in settings
+3. Request dedicated GPU time
 
-### If You Get CUDA Errors
+### Issue: Model gives wrong/weird answers
 
-If you see errors like "CUDA error: no kernel image is available", run the fix script:
+**Causes**:
+- Wrong adapter path
+- Adapters not compatible with base model
+- Temperature too high
 
-```bash
-# On an interactive GPU node:
-./fix_pytorch_cuda.sh
+**Solutions**:
+1. Verify ADAPTER_PATH in backend_api.py
+2. Check adapter files exist and are correct
+3. Lower temperature to 0.3-0.5 for more focused responses
 
-# Then try again:
-python3 load_and_test_model.py
-```
+## 🔒 Security Notes
 
-## Configuration Options
+⚠️ **Important**: This setup is for development/research use.
 
-### Origami Cluster Account Limits
+For production deployment:
+- Add authentication (API keys, JWT tokens)
+- Use HTTPS instead of HTTP
+- Implement rate limiting
+- Add input validation
+- Set up proper CORS policies
 
-Your account (`is469`) has these limits:
-- **Max GPUs per job**: 1
-- **Max CPUs per job**: 4
-- **Max RAM per job**: 32GB
-- **Max job time**: 1 day (24 hours)
-- **Max running jobs**: 2
-- **Max submitted jobs**: 4
-- **Partition**: student
-- **QOS**: studentqos
+## 📊 Performance Tips
 
-### In `load_and_test_model.py`:
+### Backend Optimization
+- Use batch processing for multiple requests
+- Cache common responses
+- Monitor GPU memory usage
+- Consider using model quantization
 
-1. **Base Model** (Line ~348):
-   ```python
-   BASE_MODEL = "unsloth/qwen2.5-vl-7b-instruct-bnb-4bit"
-   ```
+### Frontend Optimization
+- Compress images before upload
+- Implement client-side image resizing
+- Add request debouncing
+- Cache API responses
 
-2. **Adapter Path** (Line ~351) - **IMPORTANT: UPDATE THIS!**:
-   ```python
-   ADAPTER_PATH = "./backend"  # Change to your actual adapter directory path!
-   # Examples:
-   # ADAPTER_PATH = "/home/gerard.loh.2022/backend"
-   # ADAPTER_PATH = "./my_adapters"
-   ```
+## 🎯 Advanced Features
 
-3. **Test Image** (Line ~354):
-   ```python
-   TEST_IMAGE = None  # Set to image path to test vision capabilities
-   # Example:
-   # TEST_IMAGE = "./test_image.jpg"
-   ```
+### Custom System Prompts
 
-### In `run_model_test.sh`:
-
-The SLURM script is already configured with your account limits:
-
-```bash
-#SBATCH --account=is469           # Your account
-#SBATCH --partition=student       # Student partition
-#SBATCH --qos=studentqos          # Student QOS
-#SBATCH --gres=gpu:1              # 1 GPU (max allowed)
-#SBATCH --cpus-per-task=4         # 4 CPUs (max allowed)
-#SBATCH --mem=32G                 # 32GB RAM (max allowed)
-#SBATCH --time=23:59:00           # Almost 1 day
-```
-
-**Note**: You can reduce these values if you want, but cannot exceed them.
-
-## Expected Output
-
-When the script runs successfully, you should see:
-
-```
-================================================================================
-Environment Setup
-================================================================================
-✓ CUDA is available
-  GPU Device: NVIDIA A100 40GB
-  Number of GPUs: 1
-  CUDA Version: 12.1
-  PyTorch Version: 2.x.x
-
-================================================================================
-Loading Base Model
-================================================================================
-Model: unsloth/qwen2.5-vl-7b-instruct-bnb-4bit
-Loading with 4-bit quantization (BitsAndBytes)...
-Loading processor...
-Loading base model (this may take a few minutes)...
-✓ Base model loaded successfully!
-
-================================================================================
-Loading LoRA Adapters
-================================================================================
-Adapter path: ./backend
-
-Adapter files found:
-  - adapter_config.json
-  - adapter_model.safetensors
-  - ...
-
-✓ LoRA adapters loaded successfully!
-
-================================================================================
-Model Information
-================================================================================
-Total parameters: 7,615,000,000
-Trainable parameters: 4,194,304
-Trainable %: 0.06%
-
-✓ LoRA adapters are active
-
-================================================================================
-Testing Model - Text Only
-================================================================================
-Prompt: What is the capital of France?
-
-Generated Response:
---------------------------------------------------------------------------------
-The capital of France is Paris.
---------------------------------------------------------------------------------
-
-✓ Text generation successful!
-
-================================================================================
-Summary
-================================================================================
-✓ Base model loaded successfully
-✓ LoRA adapters connected
-✓ Model is ready for inference
-
-Your fine-tuned model is working! Training weights are preserved.
-```
-
-## Troubleshooting
-
-### Issue: "CUDA error: no kernel image is available"
-**Solution**: PyTorch version doesn't match GPU CUDA version.
-```bash
-# On an interactive GPU node:
-./fix_pytorch_cuda.sh
-```
-Or just resubmit the job - the updated `run_model_test.sh` fixes this automatically.
-
-### Issue: "CUDA is not available" or running on CPU
-**Solution**: You're on the login node. You need GPU access:
-```bash
-# Submit as SLURM job (recommended):
-sbatch run_model_test.sh
-
-# OR request interactive GPU:
-srun --account=is469 --partition=student --qos=studentqos --gres=gpu:1 --mem=32G --time=04:00:00 --pty bash
-```
-
-### Issue: "Adapter path does not exist"
-**Solution**: Update the `ADAPTER_PATH` variable in `load_and_test_model.py` (line 351) to point to your actual adapter directory.
-```python
-# Use absolute path if needed:
-ADAPTER_PATH = "/home/gerard.loh.2022/backend"
-```
-
-### Issue: "Missing required adapter files"
-**Solution**: Ensure your adapter directory contains:
-- `adapter_config.json`
-- `adapter_model.safetensors` (or `adapter_model.bin`)
-
-### Issue: "pip: command not found"
-**Solution**: Load the Python module first:
-```bash
-module load Python/3.12.8-GCCcore-13.3.0
-```
-
-### Issue: "torchvision not found"
-**Solution**: Install it:
-```bash
-pip install --break-system-packages torchvision
-```
-Or rerun the SLURM script - it now installs torchvision automatically.
-
-### Issue: Job queue is full / "Max submitted jobs reached"
-**Solution**: You can only submit 4 jobs at a time and run 2 simultaneously. Wait for current jobs to complete:
-```bash
-squeue -u $USER
-scancel <JOBID>  # Cancel a job if needed
-```
-
-### Issue: "CUDA out of memory"
-**Solution**: The 4-bit quantized model should fit in most GPUs. If you still get this error:
-- Make sure you're requesting the full 32GB RAM (`--mem=32G`)
-- Close any other processes using the GPU
-- Try reducing `max_new_tokens` in the generation parameters
-
-## Testing with Images
-
-To test vision-language capabilities:
-
-1. **Add a test image** to your directory
-
-2. **Update the script** (Line ~354 in `load_and_test_model.py`):
-   ```python
-   TEST_IMAGE = "./path/to/your/test_image.jpg"
-   ```
-
-3. **Run the script** - it will automatically test both text-only and vision-language generation
-
-## Advanced Usage
-
-### Custom Prompts
-
-Modify the `test_model_text_only()` function to use your own prompts:
+Edit `backend_api.py` to add system prompts:
 
 ```python
-test_prompt = "Your custom prompt here"
+messages = [
+    {"role": "system", "content": "You are a helpful assistant specialized in..."},
+    {"role": "user", "content": text_input}
+]
 ```
 
-### Generation Parameters
+### Conversation History
 
-Adjust generation settings in the `model.generate()` calls:
+Modify frontend to send conversation context:
+
+```javascript
+const conversationHistory = messages.map(m => ({
+  role: m.role,
+  content: m.content
+}));
+
+fetch(`${apiUrl}/chat`, {
+  body: JSON.stringify({
+    message: textToSend,
+    image: imageToSend,
+    history: conversationHistory  // Add this
+  })
+});
+```
+
+### Multi-Image Support
+
+Backend already supports vision-language, extend to handle multiple images:
 
 ```python
-outputs = model.generate(
-    **inputs,
-    max_new_tokens=256,      # Maximum length
-    do_sample=True,          # Use sampling
-    temperature=0.7,         # Randomness (0.1-1.0)
-    top_p=0.9,              # Nucleus sampling
-    top_k=50,               # Top-k sampling
-)
+images = [Image.open(...) for img in image_list]
+inputs = processor(text=[text], images=images, ...)
 ```
 
-### Saving the Merged Model
+## 📚 Additional Resources
 
-To save the model with adapters merged (for deployment):
+- **Qwen2.5-VL**: https://huggingface.co/Qwen/Qwen2.5-VL-7B-Instruct
+- **Unsloth**: https://github.com/unslothai/unsloth
+- **PEFT/LoRA**: https://huggingface.co/docs/peft
+- **Flask**: https://flask.palletsprojects.com/
 
-```python
-# Merge adapters into base model
-merged_model = model.merge_and_unload()
+## 💡 Tips
 
-# Save the merged model
-merged_model.save_pretrained("./merged_model")
-processor.save_pretrained("./merged_model")
-```
+1. **Start small**: Test with text-only before adding images
+2. **Monitor GPU**: Keep an eye on `nvidia-smi` output
+3. **Save settings**: Write down working temperature/token values
+4. **Backup adapters**: Keep copies of your trained adapters
+5. **Log everything**: Backend logs help debug issues
 
-## Additional Resources
-
-- **Origami Cluster Docs**: https://violet.scis.dev/docs/
-- **Transformers Documentation**: https://huggingface.co/docs/transformers
-- **PEFT Documentation**: https://huggingface.co/docs/peft
-- **Unsloth Documentation**: https://github.com/unslothai/unsloth
-
-## Support
+## 📞 Support
 
 If you encounter issues:
+1. Check logs first (`logs/api_*.out` and `logs/api_*.err`)
+2. Verify all paths are correct
+3. Test with simple text messages first
+4. Check GPU availability with `nvidia-smi`
 
-1. Check the error logs in `logs/` directory
-2. Verify GPU availability with `nvidia-smi`
-3. Ensure all dependencies are installed correctly
-4. Check that adapter files are in the correct format
+---
 
-## License
+**Happy Chatting! 🎉**
 
-This code is provided as-is for educational and research purposes.
+Your fine-tuned Qwen2.5-VL model is now accessible through a beautiful chat interface!
