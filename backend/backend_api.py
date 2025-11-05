@@ -126,6 +126,24 @@ def generate_response(text_input, image_input=None):
         Generated text response
     """
     try:
+        # Clear GPU cache before processing
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        
+        # Resize image if too large (to prevent OOM)
+        if image_input is not None:
+            max_size = 1024
+            width, height = image_input.size
+            if width > max_size or height > max_size:
+                if width > height:
+                    new_width = max_size
+                    new_height = int(height * (max_size / width))
+                else:
+                    new_height = max_size
+                    new_width = int(width * (max_size / height))
+                image_input = image_input.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                logger.info(f"Resized image from {width}x{height} to {new_width}x{new_height}")
+        
         # Prepare messages
         if image_input is not None:
             # Vision + Language input
@@ -169,11 +187,11 @@ def generate_response(text_input, image_input=None):
         # Move to device
         inputs = {k: v.to(model.device) for k, v in inputs.items()}
         
-        # Generate
+        # Generate with memory-efficient settings
         with torch.no_grad():
             outputs = model.generate(
                 **inputs,
-                max_new_tokens=MAX_NEW_TOKENS,
+                max_new_tokens=min(MAX_NEW_TOKENS, 256),  # Limit tokens for images
                 do_sample=True,
                 temperature=TEMPERATURE,
                 top_p=TOP_P,
@@ -184,6 +202,10 @@ def generate_response(text_input, image_input=None):
             outputs,
             skip_special_tokens=True
         )[0]
+        
+        # Clear GPU cache after processing
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
         
         # Extract only the assistant's response
         # Remove the input prompt from the output
@@ -198,6 +220,12 @@ def generate_response(text_input, image_input=None):
         
         return response
         
+    except torch.cuda.OutOfMemoryError as e:
+        logger.error(f"GPU out of memory: {e}")
+        # Try to recover
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        raise Exception("GPU out of memory. Please try with a smaller image or text-only message.")
     except Exception as e:
         logger.error(f"Error generating response: {e}")
         raise
