@@ -29,7 +29,7 @@ device = None
 
 # Configuration
 BASE_MODEL = "unsloth/qwen2.5-vl-7b-instruct-bnb-4bit"
-ADAPTER_PATH = "./backend"  # Update this to your adapter path
+ADAPTER_PATH = "."  # Update this to your adapter path
 MAX_NEW_TOKENS = 512
 TEMPERATURE = 0.7
 TOP_P = 0.9
