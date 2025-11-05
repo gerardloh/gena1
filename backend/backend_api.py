@@ -29,7 +29,7 @@ device = None
 
 # Configuration
 BASE_MODEL = "unsloth/qwen2.5-vl-7b-instruct-bnb-4bit"
-ADAPTER_PATH = "."  # Update this to your adapter path
+ADAPTER_PATH = "./backend"  # Update this to your adapter path
 MAX_NEW_TOKENS = 512
 TEMPERATURE = 0.7
 TOP_P = 0.9
@@ -164,6 +164,9 @@ def generate_response(text_input, image_input=None):
         if "<|im_start|>assistant" in generated_text:
             response = generated_text.split("<|im_start|>assistant")[-1]
             response = response.replace("<|im_end|>", "").strip()
+        elif "assistant\n" in generated_text:
+            # Handle case where format is: system\n...\nuser\n...\nassistant\n...
+            response = generated_text.split("assistant\n")[-1].strip()
         else:
             response = generated_text
         
