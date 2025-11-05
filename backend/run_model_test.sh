@@ -31,14 +31,32 @@ echo "Python version:"
 python3 --version
 echo ""
 
-# Show GPU information
+# Show GPU and CUDA information
 echo "GPU Information:"
 nvidia-smi
 echo ""
+echo "CUDA Version on system:"
+nvcc --version || echo "nvcc not in PATH"
+echo ""
 
-# Install required packages if not already installed
-echo "Installing/Checking required packages..."
-pip install --break-system-packages transformers accelerate peft bitsandbytes torch torchvision pillow safetensors
+# Check current PyTorch CUDA version
+echo "Checking current PyTorch installation..."
+python3 -c "import torch; print('PyTorch version:', torch.__version__); print('CUDA available:', torch.cuda.is_available()); print('CUDA version:', torch.version.cuda if torch.cuda.is_available() else 'N/A')" 2>/dev/null || echo "PyTorch not installed yet"
+echo ""
+
+# Uninstall existing torch to avoid conflicts
+echo "Removing existing PyTorch installation..."
+pip uninstall -y torch torchvision torchaudio 2>/dev/null || true
+echo ""
+
+# Install PyTorch with CUDA 12.1 (compatible with most recent GPUs)
+echo "Installing PyTorch with CUDA 12.1 support..."
+pip install --break-system-packages torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+echo ""
+
+# Install other required packages
+echo "Installing other required packages..."
+pip install --break-system-packages transformers accelerate peft bitsandbytes pillow safetensors
 
 echo ""
 echo "=================================================="
