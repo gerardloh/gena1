@@ -75,11 +75,37 @@ def load_model_and_processor():
         
         # Load LoRA adapters
         logger.info(f"Loading LoRA adapters from {ADAPTER_PATH}...")
-        model = PeftModel.from_pretrained(
-            base_model,
-            ADAPTER_PATH,
-            is_trainable=False
-        )
+        
+        # Check if adapter path exists
+        if not os.path.exists(ADAPTER_PATH):
+            logger.error(f"Adapter path does not exist: {ADAPTER_PATH}")
+            logger.error("LoRA adapters will NOT be loaded!")
+            logger.info("✓ Base model loaded (WITHOUT LoRA adapters)")
+            model = base_model
+        else:
+            # Check for adapter files
+            adapter_files = os.listdir(ADAPTER_PATH)
+            logger.info(f"Files in adapter directory: {adapter_files}")
+            
+            if 'adapter_config.json' not in adapter_files:
+                logger.error("adapter_config.json not found in adapter directory!")
+                logger.error("LoRA adapters will NOT be loaded!")
+                model = base_model
+            else:
+                model = PeftModel.from_pretrained(
+                    base_model,
+                    ADAPTER_PATH,
+                    is_trainable=False
+                )
+                logger.info("✓ LoRA adapters loaded successfully!")
+                
+                # Verify adapters are active
+                if hasattr(model, 'peft_config'):
+                    logger.info("✓ PEFT adapters are ACTIVE")
+                    for adapter_name in model.peft_config.keys():
+                        logger.info(f"  - Active adapter: {adapter_name}")
+                else:
+                    logger.warning("⚠ No PEFT config found - adapters may not be active!")
         
         logger.info("✓ Model loaded successfully!")
         return True
