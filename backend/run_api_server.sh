@@ -38,6 +38,20 @@ echo "Installing PyTorch with CUDA support..."
 pip uninstall -y torch torchvision torchaudio 2>/dev/null || true
 pip install --break-system-packages torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 
+
+DB_PATH="./chroma_fashion_db_hybrid"
+IMAGE_STORE="fashion_image_store_hybrid.pkl"
+
+echo "🔍 Checking RAG database and image store..."
+
+if [ -d "$DB_PATH" ] && [ -f "$IMAGE_STORE" ]; then
+    echo "✅ RAG database already exists. Skipping build."
+else
+    echo "⚙️  RAG database not found. Building now..."
+    python build_fashion_rag_db.py
+fi
+
+
 echo ""
 echo "=================================================="
 echo "Starting Flask API server on port 5000..."
