@@ -291,19 +291,6 @@ def chat():
             except Exception as e:
                 logger.error(f"Error decoding image: {e}")
 
-        # Step 1 — Detect if the query is nonsensical
-        clarification_prompt = (
-            "Determine if the following message is a meaningful fashion-related query. "
-            "If unclear or nonsensical, respond ONLY with 'clarify' (no punctuation). "
-            f"Message: {text_input}"
-        )
-        clarify_flag = generate_response(clarification_prompt, None).strip().lower()
-
-        if "clarify" in clarify_flag:
-            return jsonify({
-                "text": "I'm not sure I understood. Could you describe what you're wearing or what kind of outfit you're looking for?",
-                "image": None
-            })
 
         # Step 2 — Generate fashion recommendation
         recommendation = generate_response(text_input, image_input)
