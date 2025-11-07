@@ -237,21 +237,12 @@ def make_rag_card(text: str, user_img: Image.Image, rag_imgs: list) -> Image.Ima
     """Compose a visual response card with model text + retrieved RAG images."""
 
     # Canvas setup
-    width, height = 900, 600
+    width, height = 600, 600
     card = Image.new("RGB", (width, height), color=(255, 255, 255))
     draw = ImageDraw.Draw(card)
+    x_offset = 0
 
-    # Optional: add user image on the left if provided
-    x_offset = 20
-    if user_img is not None:
-        user_thumb = user_img.copy()
-        user_thumb.thumbnail((250, 250))
-        card.paste(user_thumb, (x_offset, 80))
-        x_offset += 270
 
-    # Add model recommendation text
-    text_wrapped = "\n".join([text[i:i+60] for i in range(0, len(text), 60)])
-    draw.text((x_offset, 40), f"👗 Recommendation:\n{text_wrapped}", fill=(0, 0, 0))
 
     # Paste up to 3 RAG images on the right
     y_offset = 120
@@ -319,7 +310,7 @@ def chat():
         logger.info(f"Model recommendation: {recommendation}")
 
         # Step 3 — Retrieve relevant item images
-        rag_payload = retrieve_relevant_items_from_text(recommendation, top_k=4)
+        rag_payload = retrieve_relevant_items_from_text(recommendation, top_k=4, generate_response=generate_response)
         rag_images = [img for img in rag_payload["images"] if img is not None]
 
         # Step 4 — Create composite image (only visuals, no text)

@@ -15,7 +15,7 @@ import chromadb
 from typing import List, Dict, Any
 from sentence_transformers import SentenceTransformer
 from sklearn.feature_extraction.text import TfidfVectorizer
-from PIL import Image
+from PIL import Image, ImageChops, ImageOps
 
 
 # ---------------------------------------------------------------------
@@ -125,11 +125,37 @@ def hybrid_retrieve_v2(
     scored.sort(key=lambda x: x["score"], reverse=True)
     return scored[:top_k]
 
+def _trim_whitespace(im: Image.Image, bg=(255, 255, 255)) -> Image.Image:
+    """
+    Trim uniform white-ish borders while preserving the garment.
+    Robust to JPEG (no alpha). Falls back gracefully.
+    """
+    try:
+        if im.mode != "RGB":
+            im = im.convert("RGB")
+        bg_img = Image.new("RGB", im.size, bg)
+        diff = ImageChops.difference(im, bg_img)
+        bbox = diff.getbbox()
+        if bbox:
+            im = im.crop(bbox)
+        return im
+    except Exception:
+        return im
+
+def _make_thumb(im: Image.Image, size=(260, 260)) -> Image.Image:
+    im = _trim_whitespace(im)
+    im = ImageOps.contain(im, size, method=Image.BICUBIC)
+    # pad to square
+    canvas = Image.new("RGB", size, (255, 255, 255))
+    x = (size[0] - im.width) // 2
+    y = (size[1] - im.height) // 2
+    canvas.paste(im, (x, y))
+    return canvas
 
 # ---------------------------------------------------------------------
 # Public entry
 # ---------------------------------------------------------------------
-def retrieve_relevant_items_from_text(recommendation_text: str, top_k: int = 4):
+def retrieve_relevant_items_from_text(recommendation_text: str, top_k: int = 4, generate_response=None):
     """
     Use the Qwen model itself to extract the recommended item (color + type)
     from its own generated answer, then run RAG retrieval using that extracted phrase.
