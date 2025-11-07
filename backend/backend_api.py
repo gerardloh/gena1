@@ -277,18 +277,17 @@ def health_check():
 @app.route('/chat', methods=['POST'])
 def chat():
     """
-    Main chat endpoint.
-    Accepts text + optional image.
-    Returns a composited image showing model recommendation and RAG results.
+    Handles user queries with optional image input.
+    Returns JSON containing text + (optional) base64-encoded image.
+    If the model detects unclear or nonsensical input, it asks for clarification first.
     """
     try:
         data = request.json
         if not data or 'message' not in data:
             return jsonify({'error': 'No message provided'}), 400
 
-        text_input = data['message']
+        text_input = data['message'].strip()
         image_input = None
-        top_k = int(data.get('top_k', 3))
 
         # Optional user image
         if 'image' in data and data['image']:
@@ -298,37 +297,53 @@ def chat():
                     image_data = image_data.split('base64,')[1]
                 image_bytes = base64.b64decode(image_data)
                 image_input = Image.open(io.BytesIO(image_bytes)).convert('RGB')
-                logger.info(f"Received user image: {image_input.size}")
             except Exception as e:
                 logger.error(f"Error decoding image: {e}")
-                image_input = None
 
-        # Step 1 — Generate recommendation using model
-        logger.info("Generating model response...")
-        response_text = generate_response(text_input, image_input)
-        logger.info(f"Model generated: {response_text}")
+        # Step 1 — Detect if the query is nonsensical
+        clarification_prompt = (
+            "Determine if the following message is a meaningful fashion-related query. "
+            "If unclear or nonsensical, respond ONLY with 'clarify' (no punctuation). "
+            f"Message: {text_input}"
+        )
+        clarify_flag = generate_response(clarification_prompt, None).strip().lower()
 
-        # Step 2 — Retrieve relevant fashion items from RAG
-        try:
-            rag_payload = retrieve_relevant_items_from_text(response_text, top_k=top_k)
-            rag_images = [img for img in rag_payload["images"] if img is not None]
-            logger.info(f"RAG retrieved {len(rag_images)} matching items.")
-        except Exception as e:
-            logger.error(f"RAG retrieval failed: {e}")
-            rag_images = []
+        if "clarify" in clarify_flag:
+            return jsonify({
+                "text": "I'm not sure I understood. Could you describe what you're wearing or what kind of outfit you're looking for?",
+                "image": None
+            })
 
-        # Step 3 — Compose response card
-        final_img = make_rag_card(response_text, image_input, rag_images)
+        # Step 2 — Generate fashion recommendation
+        recommendation = generate_response(text_input, image_input)
+        logger.info(f"Model recommendation: {recommendation}")
 
-        # Step 4 — Return the composite image as response
-        img_bytes = BytesIO()
-        final_img.save(img_bytes, format="PNG")
-        img_bytes.seek(0)
-        return send_file(img_bytes, mimetype="image/png")
+        # Step 3 — Retrieve relevant item images
+        rag_payload = retrieve_relevant_items_from_text(recommendation, top_k=4)
+        rag_images = [img for img in rag_payload["images"] if img is not None]
+
+        # Step 4 — Create composite image (only visuals, no text)
+        if rag_images:
+            from io import BytesIO
+            card = make_rag_card("", None, rag_images)
+            img_bytes = BytesIO()
+            card.save(img_bytes, format="PNG")
+            img_bytes.seek(0)
+            base64_img = base64.b64encode(img_bytes.getvalue()).decode("utf-8")
+            img_uri = f"data:image/png;base64,{base64_img}"
+        else:
+            img_uri = None
+
+        # Step 5 — Return both text + image URL
+        return jsonify({
+            "text": recommendation.strip(),
+            "image": img_uri
+        })
 
     except Exception as e:
-        logger.error(f"Error in /chat: {e}")
+        logger.error(f"Error in /chat endpoint: {e}")
         return jsonify({'error': str(e)}), 500
+
 
 @app.route('/config', methods=['GET'])
 def get_config():
