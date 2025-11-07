@@ -48,40 +48,100 @@ def init_rag(
     image_store_path: str = _DEFAULT_IMAGE_STORE_PATH,
 ) -> None:
     """
-    Initialize ChromaDB client, embedding model, TF-IDF, and image store.
-
-    Safe to call multiple times — initialization is idempotent.
+    Initialize RAG components. 
+    If Chroma or image store are missing, automatically download and build them
+    using the Anony100/FashionRec dataset from Hugging Face.
     """
     global _chroma_client, _collection, _embedding_model, _tfidf_vectorizer, _image_store
 
-    # --- ChromaDB connection ---
+    from datasets import load_dataset
+
+    # --- Step 1: ChromaDB connection or creation ---
     if _chroma_client is None:
+        os.makedirs(db_path, exist_ok=True)
         _chroma_client = chromadb.PersistentClient(path=db_path)
+
+    # Try to load collection; if missing, build from dataset
+    try:
+        _collection = _chroma_client.get_collection("fashion_items_hybrid")
+        print("✓ Loaded existing Chroma collection")
+    except Exception:
+        print("⚠ No existing collection found — building from dataset...")
+        _collection = _chroma_client.create_collection("fashion_items_hybrid")
+
+        # Download dataset from Hugging Face (FashionRec)
+        dataset = load_dataset("Anony100/FashionRec", split="train")
+
+        # Initialize embedding model
+        _embedding_model = SentenceTransformer("all-mpnet-base-v2")
+
+        # Prepare batches for embedding & Chroma ingestion
+        batch_size = 64
+        ids, docs, metas = [], [], []
+        image_store = {}
+
+        from tqdm import tqdm
+        from PIL import Image
+        import requests
+        from io import BytesIO
+
+        for i in tqdm(range(0, len(dataset), batch_size), desc="Building Chroma collection"):
+            batch = dataset[i:i + batch_size]
+
+            for item in batch:
+                item_id = str(item.get("id", len(ids)))
+                caption = item.get("caption", "")
+                keywords = item.get("category", "")
+                image_url = item.get("image_url") or item.get("image")
+
+                # Save text info
+                ids.append(item_id)
+                docs.append(caption)
+                metas.append({"keywords": keywords, "url": image_url})
+
+                # Try to store image (for retrieval visuals)
+                try:
+                    img = Image.open(BytesIO(requests.get(image_url, timeout=10).content)).convert("RGB")
+                    img = img.resize((224, 224))
+                    image_store[item_id] = img
+                except Exception:
+                    continue
+
+        # Compute embeddings
+        print("Encoding embeddings...")
+        embeddings = _embedding_model.encode(docs, batch_size=64, show_progress_bar=True).tolist()
+
+        # Insert into Chroma
+        print("Populating Chroma collection...")
+        _collection.add(ids=ids, documents=docs, metadatas=metas, embeddings=embeddings)
+
+        # Save image store
+        with open(image_store_path, "wb") as f:
+            pickle.dump(image_store, f)
+
+        print(f"✓ Built new ChromaDB and image store with {len(ids)} items")
+
+    # --- Step 2: Load existing Chroma if found ---
+    if _collection is None:
         _collection = _chroma_client.get_collection("fashion_items_hybrid")
 
-    # --- Embedding model ---
+    # --- Step 3: Embedding model & TF-IDF ---
     if _embedding_model is None:
         _embedding_model = SentenceTransformer("all-mpnet-base-v2")
 
-    # --- TF-IDF vectorizer (keyword weighting) ---
     if _tfidf_vectorizer is None:
         _tfidf_vectorizer = TfidfVectorizer(max_features=1000, stop_words="english")
-        try:
-            docs = _collection.get(limit=min(_collection.count(), 3000)).get("documents", [])
-            if docs:
-                _tfidf_vectorizer.fit(docs)
-        except Exception:
-            # Continue even if fitting fails (hybrid retrieval will degrade gracefully)
-            pass
+        docs = _collection.get(limit=min(_collection.count(), 3000)).get("documents", [])
+        if docs:
+            _tfidf_vectorizer.fit(docs)
 
-    # --- Image store (item_id → PIL.Image) ---
+    # --- Step 4: Load image store ---
     if _image_store is None:
         if os.path.exists(image_store_path):
             with open(image_store_path, "rb") as f:
                 _image_store = pickle.load(f)
         else:
             _image_store = {}
-
 
 # ---------------------------------------------------------------------
 # Hybrid Retrieval
