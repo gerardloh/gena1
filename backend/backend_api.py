@@ -2,6 +2,9 @@
 Flask Backend API for Qwen2.5-VL Chatbot
 Handles model inference with text and image inputs
 """
+from io import BytesIO
+from PIL import Image, ImageDraw, ImageFont
+from rag_utils import retrieve_relevant_items_from_text
 
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
@@ -230,6 +233,38 @@ def generate_response(text_input, image_input=None):
         logger.error(f"Error generating response: {e}")
         raise
 
+def make_rag_card(text: str, user_img: Image.Image, rag_imgs: list) -> Image.Image:
+    """Compose a visual response card with model text + retrieved RAG images."""
+
+    # Canvas setup
+    width, height = 900, 600
+    card = Image.new("RGB", (width, height), color=(255, 255, 255))
+    draw = ImageDraw.Draw(card)
+
+    # Optional: add user image on the left if provided
+    x_offset = 20
+    if user_img is not None:
+        user_thumb = user_img.copy()
+        user_thumb.thumbnail((250, 250))
+        card.paste(user_thumb, (x_offset, 80))
+        x_offset += 270
+
+    # Add model recommendation text
+    text_wrapped = "\n".join([text[i:i+60] for i in range(0, len(text), 60)])
+    draw.text((x_offset, 40), f"👗 Recommendation:\n{text_wrapped}", fill=(0, 0, 0))
+
+    # Paste up to 3 RAG images on the right
+    y_offset = 120
+    for i, img in enumerate(rag_imgs[:3]):
+        if img:
+            thumb = img.copy()
+            thumb.thumbnail((250, 250))
+            card.paste(thumb, (x_offset, y_offset))
+            y_offset += 270
+
+    return card
+
+
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
@@ -242,52 +277,57 @@ def health_check():
 @app.route('/chat', methods=['POST'])
 def chat():
     """
-    Main chat endpoint
-    Accepts: JSON with 'message' (text) and optional 'image' (base64)
-    Returns: JSON with 'response' (text)
+    Main chat endpoint.
+    Accepts text + optional image.
+    Returns a composited image showing model recommendation and RAG results.
     """
     try:
         data = request.json
-        
         if not data or 'message' not in data:
             return jsonify({'error': 'No message provided'}), 400
-        
+
         text_input = data['message']
         image_input = None
-        
-        # Process image if provided
+        top_k = int(data.get('top_k', 3))
+
+        # Optional user image
         if 'image' in data and data['image']:
             try:
-                # Decode base64 image
                 image_data = data['image']
-                
-                # Remove data URL prefix if present
                 if 'base64,' in image_data:
                     image_data = image_data.split('base64,')[1]
-                
                 image_bytes = base64.b64decode(image_data)
                 image_input = Image.open(io.BytesIO(image_bytes)).convert('RGB')
-                
-                logger.info(f"Received image: {image_input.size}")
-                
+                logger.info(f"Received user image: {image_input.size}")
             except Exception as e:
-                logger.error(f"Error processing image: {e}")
-                return jsonify({'error': 'Invalid image data'}), 400
-        
-        logger.info(f"Processing request: text='{text_input[:50]}...', has_image={image_input is not None}")
-        
-        # Generate response
-        response = generate_response(text_input, image_input)
-        
-        logger.info(f"Generated response: '{response[:100]}...'")
-        
-        return jsonify({
-            'response': response,
-            'timestamp': datetime.now().isoformat()
-        })
-        
+                logger.error(f"Error decoding image: {e}")
+                image_input = None
+
+        # Step 1 — Generate recommendation using model
+        logger.info("Generating model response...")
+        response_text = generate_response(text_input, image_input)
+        logger.info(f"Model generated: {response_text}")
+
+        # Step 2 — Retrieve relevant fashion items from RAG
+        try:
+            rag_payload = retrieve_relevant_items_from_text(response_text, top_k=top_k)
+            rag_images = [img for img in rag_payload["images"] if img is not None]
+            logger.info(f"RAG retrieved {len(rag_images)} matching items.")
+        except Exception as e:
+            logger.error(f"RAG retrieval failed: {e}")
+            rag_images = []
+
+        # Step 3 — Compose response card
+        final_img = make_rag_card(response_text, image_input, rag_images)
+
+        # Step 4 — Return the composite image as response
+        img_bytes = BytesIO()
+        final_img.save(img_bytes, format="PNG")
+        img_bytes.seek(0)
+        return send_file(img_bytes, mimetype="image/png")
+
     except Exception as e:
-        logger.error(f"Error in chat endpoint: {e}")
+        logger.error(f"Error in /chat: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/config', methods=['GET'])
