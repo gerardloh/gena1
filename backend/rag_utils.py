@@ -129,14 +129,65 @@ def hybrid_retrieve_v2(
 # ---------------------------------------------------------------------
 # Public entry
 # ---------------------------------------------------------------------
-def retrieve_relevant_items_from_text(recommendation_text: str, top_k: int = 3):
-    """Retrieve fashion images + metadata for model recommendation text."""
+def retrieve_relevant_items_from_text(recommendation_text: str, top_k: int = 4):
+    """
+    Use the Qwen model itself to extract the recommended item (color + type)
+    from its own generated answer, then run RAG retrieval using that extracted phrase.
+    Includes detailed debug prints to trace the flow.
+    """
     init_rag()
-    results = hybrid_retrieve_v2(recommendation_text, top_k=top_k)
 
+    print("\n==============================")
+    print(f"[DEBUG] Full model recommendation text:\n{recommendation_text}")
+    print("==============================")
+
+    # Step 1 — Ask Qwen to extract the item it recommended
+    extraction_prompt = (
+        "You are extracting a fashion item from a sentence.\n\n"
+        "Given the following text, return ONLY the specific clothing item (color + type) "
+        "that is being recommended by the model, in a concise natural phrase.\n\n"
+        "For example:\n"
+        "- Input: 'I recommend a solid white crewneck sweatshirt.'\n"
+        "- Output: white crewneck sweatshirt\n\n"
+        "- Input: 'Try a navy polo shirt with your khaki pants.'\n"
+        "- Output: navy polo shirt\n\n"
+        "Now extract from this text:\n"
+        f"{recommendation_text}\n\n"
+        "Return only the item phrase, no explanation or punctuation."
+    )
+
+    try:
+        extracted_item = generate_response(extraction_prompt, None).strip()
+    except Exception as e:
+        print(f"[DEBUG] Extraction model failed → {e}")
+        extracted_item = ""
+
+    if not extracted_item:
+        extracted_item = recommendation_text.strip().split('.')[0]  # fallback
+
+    print(f"[DEBUG] Qwen-extracted item phrase → '{extracted_item}'")
+
+    # Step 2 — Query RAG with that extracted phrase
+    query_text = extracted_item
+    results = hybrid_retrieve_v2(query_text, top_k=max(15, top_k * 3))
+
+    print(f"[DEBUG] RAG queried for → '{query_text}'")
+    print(f"[DEBUG] Retrieved {len(results)} candidate items")
+
+    # Step 3 — Print debug table of top matches
+    for i, r in enumerate(results[:top_k]):
+        desc = r['description'][:80].replace("\n", " ")
+        score = round(r['score'], 3)
+        print(f"[DEBUG] #{i+1} → '{desc}' (score={score})")
+
+    # Step 4 — Collect images
     images = []
-    for r in results:
+    for r in results[:top_k]:
         img = _image_store.get(r["item_id"]) if _image_store else None
-        images.append(img if isinstance(img, Image.Image) else None)
+        if isinstance(img, Image.Image):
+            img = _trim_whitespace(img)
+        images.append(img)
 
-    return {"rag_results": results, "images": images}
+    print(f"[DEBUG] Returning {len(images)} images\n==============================\n")
+
+    return {"rag_results": results[:top_k], "images": images}
