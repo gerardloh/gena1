@@ -117,7 +117,7 @@ def load_model_and_processor():
         logger.error(f"Error loading model: {e}")
         return False
 
-def generate_response(text_input, image_input=None):
+def generate_response(text_input, image_input=None, TEMPERATURE=TEMPERATURE):
     """
     Generate response from the model
     
@@ -297,25 +297,29 @@ def chat():
         logger.info(f"Model recommendation: {recommendation}")
 
         # Step 3 — Retrieve relevant item images
-        rag_payload = retrieve_relevant_items_from_text(recommendation, top_k=4, generate_response=generate_response)
+        rag_payload = retrieve_relevant_items_from_text(recommendation, user_query=text_input, top_k=4, generate_response=generate_response)
         rag_images = [img for img in rag_payload["images"] if img is not None]
 
         # Step 4 — Create composite image (only visuals, no text)
         if rag_images:
             from io import BytesIO
-            card = make_rag_card("", None, rag_images)
-            img_bytes = BytesIO()
-            card.save(img_bytes, format="PNG")
-            img_bytes.seek(0)
-            base64_img = base64.b64encode(img_bytes.getvalue()).decode("utf-8")
-            img_uri = f"data:image/png;base64,{base64_img}"
+            import base64
+
+            image_uris = []
+            for img in rag_images:
+                img_bytes = BytesIO()
+                img.save(img_bytes, format="PNG")
+                img_bytes.seek(0)
+                base64_img = base64.b64encode(img_bytes.getvalue()).decode("utf-8")
+                img_uri = f"data:image/png;base64,{base64_img}"
+                image_uris.append(img_uri)
         else:
-            img_uri = None
+            image_uris = []
 
         # Step 5 — Return both text + image URL
         return jsonify({
             "text": recommendation.strip(),
-            "image": img_uri
+            "image": image_uris
         })
 
     except Exception as e:

@@ -125,37 +125,11 @@ def hybrid_retrieve_v2(
     scored.sort(key=lambda x: x["score"], reverse=True)
     return scored[:top_k]
 
-def _trim_whitespace(im: Image.Image, bg=(255, 255, 255)) -> Image.Image:
-    """
-    Trim uniform white-ish borders while preserving the garment.
-    Robust to JPEG (no alpha). Falls back gracefully.
-    """
-    try:
-        if im.mode != "RGB":
-            im = im.convert("RGB")
-        bg_img = Image.new("RGB", im.size, bg)
-        diff = ImageChops.difference(im, bg_img)
-        bbox = diff.getbbox()
-        if bbox:
-            im = im.crop(bbox)
-        return im
-    except Exception:
-        return im
-
-def _make_thumb(im: Image.Image, size=(260, 260)) -> Image.Image:
-    im = _trim_whitespace(im)
-    im = ImageOps.contain(im, size, method=Image.BICUBIC)
-    # pad to square
-    canvas = Image.new("RGB", size, (255, 255, 255))
-    x = (size[0] - im.width) // 2
-    y = (size[1] - im.height) // 2
-    canvas.paste(im, (x, y))
-    return canvas
 
 # ---------------------------------------------------------------------
 # Public entry
 # ---------------------------------------------------------------------
-def retrieve_relevant_items_from_text(recommendation_text: str, top_k: int = 4, generate_response=None):
+def retrieve_relevant_items_from_text(recommendation_text: str, user_query: str, top_k: int = 4, generate_response=None):
     """
     Use the Qwen model itself to extract the recommended item (color + type)
     from its own generated answer, then run RAG retrieval using that extracted phrase.
@@ -168,22 +142,16 @@ def retrieve_relevant_items_from_text(recommendation_text: str, top_k: int = 4, 
     print("==============================")
 
     # Step 1 — Ask Qwen to extract the item it recommended
-    extraction_prompt = (
-        "You are extracting a fashion item from a sentence.\n\n"
-        "Given the following text, return ONLY the specific clothing item (color + type) "
-        "that is being recommended by the model, in a concise natural phrase.\n\n"
-        "For example:\n"
-        "- Input: 'I recommend a solid white crewneck sweatshirt.'\n"
-        "- Output: white crewneck sweatshirt\n\n"
-        "- Input: 'Try a navy polo shirt with your khaki pants.'\n"
-        "- Output: navy polo shirt\n\n"
-        "Now extract from this text:\n"
-        f"{recommendation_text}\n\n"
-        "Return only the item phrase, no explanation or punctuation."
-    )
+    extraction_prompt = f"""Given this fashion recommendation, extract ONLY the item being RECOMMENDED (suggested), NOT the user's item.
+
+User Query: "{user_query}"
+Recommendation: "{recommendation_text}"
+
+What specific item is being RECOMMENDED? (answer with only the item name, e.g., "blue denim jacket" or "leather boots")
+Recommended item:"""
 
     try:
-        extracted_item = generate_response(extraction_prompt, None).strip()
+        extracted_item = generate_response(extraction_prompt, None, TEMPERATURE=0.1).strip()
     except Exception as e:
         print(f"[DEBUG] Extraction model failed → {e}")
         extracted_item = ""
@@ -210,8 +178,7 @@ def retrieve_relevant_items_from_text(recommendation_text: str, top_k: int = 4, 
     images = []
     for r in results[:top_k]:
         img = _image_store.get(r["item_id"]) if _image_store else None
-        if isinstance(img, Image.Image):
-            img = _trim_whitespace(img)
+        
         images.append(img)
 
     print(f"[DEBUG] Returning {len(images)} images\n==============================\n")
