@@ -31,7 +31,7 @@ echo ""
 
 # Install required packages if not already installed
 echo "Installing required packages..."
-pip install --break-system-packages flask flask-cors transformers accelerate peft bitsandbytes pillow safetensors
+pip install --break-system-packages flask flask-cors transformers accelerate peft bitsandbytes pillow safetensors chromadb sentence-transformers scikit-learn webdataset huggingface-hub
 
 # Install correct PyTorch version
 echo "Installing PyTorch with CUDA support..."
