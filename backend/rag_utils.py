@@ -169,7 +169,7 @@ def retrieve_relevant_items_from_text(recommendation_text: str, user_query: str,
 
     print(f"[DEBUG] RAG queried for → '{query_text}'")
     print(f"[DEBUG] Retrieved {len(results)} candidate items")
-
+    print(f"[DEBUG] {results[0:top_k]}")
     # Step 3 — Print debug table of top matches
     for i, r in enumerate(results[:top_k]):
         desc = r['description'][:80].replace("\n", " ")
