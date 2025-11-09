@@ -66,7 +66,37 @@ def init_rag(
         with open(image_store_path, "rb") as f:
             _image_store = pickle.load(f)
 
+def extract_contextual_description(description: str, generate_response) -> str:
+    """
+    Uses an LLM to extract only the non-recommendation part of a fashion recommendation sentence.
+    """
+    prompt = f"""
+    The following sentence contains a fashion recommendation.
+    Your task is to extract only the CONTEXT — the part describing the user's existing outfit or
+    what the recommendation is based on. Exclude the item being recommended.
 
+    Example 1:
+    Sentence: "I recommend black stiletto heels to complement your black dress."
+    Output: "to complement your black dress."
+
+    Example 2:
+    Sentence: "For your white blouse and black skirt, I recommend heels."
+    Output: "for your white blouse and black skirt."
+
+    Example 3:
+    Sentence: "Pairing your beige coat with a red scarf will look great."
+    Output: "your beige coat"
+
+    Sentence: "{description}"
+    Output:
+    """
+    try:
+        context = generate_response(prompt, None, TEMPERATURE=0.1).strip()
+        return context
+    except Exception as e:
+        print(f"[WARN] Context extraction failed: {e}")
+        return description  # fallback
+    
 # ---------------------------------------------------------------------
 # Hybrid retrieval
 # ---------------------------------------------------------------------
@@ -76,6 +106,7 @@ def hybrid_retrieve_v2(
     semantic_weight: float = 0.6,
     keyword_weight: float = 0.25,
     type_weight: float = 0.15,
+    generate_response=None,
 ) -> List[Dict[str, Any]]:
     """Hybrid semantic + keyword + type retrieval."""
     if _collection is None or _embedding_model is None:
@@ -100,21 +131,14 @@ def hybrid_retrieve_v2(
             len(query_keywords) + len(item_keywords) + 1e-6
         )
         try:
-            desc_lower = desc.lower()
-        # --- 1️⃣ Split sentence around “recommend” to isolate non-recommendation parts ---
-            if "recommend" in desc_lower:
-                parts = re.sub(r"\b(?:i\s+recommend|recommend(?:ing)?|recommended)\b[^.]*?(?=\b(because|to|for|with)\b|[.!?,]|$)","",desc_lower,flags=re.IGNORECASE,)
-                # Prefer the parts BEFORE "recommend" (context) and AFTER it (reasoning)
-                pre_context = parts[0].strip() if len(parts) > 0 else ""
-                post_context = parts[1].strip() if len(parts) > 1 else ""
-                context_text = (pre_context + " " + post_context).strip()
-            else:
-                context_text = desc_lower
+            context_text = extract_contextual_description(desc, generate_response)
+            desc_words = set(context_text.lower().split())
+            print(f"[DEBUG] Context extracted: '{context_text}'")
+            print(f"[DEBUG] original desc: '{desc}'")
+
         # --- 2️⃣ Extract words from that context ---
             q_words = set(query_text.lower().split())
-            context_text = set(context_text.split())
-            print(f"[DEBUG] Desc words: {context_text}, Q words: {q_words}")
-            type_overlap = len(context_text & q_words) / (len(q_words) + 1e-6)
+            type_overlap = len(desc_words & q_words) / (len(q_words) + 1e-6)
         except Exception:
             type_overlap = 0.0
 
@@ -177,7 +201,7 @@ def retrieve_relevant_items_from_text(recommendation_text: str, user_query: str,
 
     # Step 2 — Query RAG with that extracted phrase
     query_text = extracted_item
-    results = hybrid_retrieve_v2(query_text, top_k=max(15, top_k * 3))
+    results = hybrid_retrieve_v2(query_text, top_k=max(15, top_k * 3), generate_response=generate_response)
 
     print(f"[DEBUG] RAG queried for → '{query_text}'")
     print(f"[DEBUG] Retrieved {len(results)} candidate items")
