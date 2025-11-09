@@ -27,6 +27,12 @@ _embedding_model = None
 _tfidf_vectorizer = None
 _image_store = None
 
+from transformers import AutoTokenizer
+
+# Load the base tokenizer (not the processor)
+base_tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-7B-Instruct")
+# Configuration
+BASE_MODEL = "unsloth/qwen2.5-vl-7b-instruct-bnb-4bit"
 _DEFAULT_DB_PATH = "./chroma_fashion_db_hybrid"
 _DEFAULT_IMAGE_STORE_PATH = "fashion_image_store_hybrid.pkl"
 
@@ -108,14 +114,19 @@ def hybrid_retrieve_v2(
     type_weight: float = 0.15,
     generate_response=None,
 ) -> List[Dict[str, Any]]:
-    """Hybrid semantic + keyword + type retrieval."""
+    """
+    Hybrid retrieval that emphasizes the *non-recommendation* context.
+    It extracts descriptive context using an LLM and re-embeds that portion
+    for accurate semantic comparison.
+    """
     if _collection is None or _embedding_model is None:
         raise RuntimeError("RAG not initialized. Call init_rag() first.")
 
+    # Encode query
     query_embedding = _embedding_model.encode(query_text).tolist()
+    # Fetch a larger pool for reranking
     semantic_results = _collection.query(query_embeddings=[query_embedding], n_results=top_k * 3)
-
-    query_keywords = set([w for w in query_text.lower().split() if len(w) > 3])
+    query_keywords = {w for w in query_text.lower().split() if len(w) > 3}
 
     scored = []
     for idx, (iid, desc, meta) in enumerate(
@@ -125,32 +136,49 @@ def hybrid_retrieve_v2(
             semantic_results["metadatas"][0],
         )
     ):
-        semantic_score = 1.0 - semantic_results["distances"][0][idx]
+        # 1️⃣ Extract only contextual (non-recommendation) text
+        try:
+            context_text = extract_contextual_description(desc, generate_response)
+            if not context_text or len(context_text.strip()) < 5:
+                context_text = desc  # fallback
+        except Exception as e:
+            print(f"[WARN] Context extraction failed: {e}")
+            context_text = desc
+
+        print(f"\n[DEBUG] Original desc: {desc}")
+        print(f"[DEBUG] Extracted context: {context_text}")
+
+        # 2️⃣ Compute new semantic score using context embedding
+        context_embedding = _embedding_model.encode(context_text).tolist()
+        # cosine similarity = 1 - distance
+        semantic_score = 1.0 - float(
+            _embedding_model.similarity(query_embedding, context_embedding)
+            if hasattr(_embedding_model, "similarity")
+            else semantic_results["distances"][0][idx]
+        )
+
+        # 3️⃣ Keyword and type overlap scores
         item_keywords = set((meta or {}).get("keywords", "").split(","))
         keyword_overlap = len(query_keywords & item_keywords) / (
             len(query_keywords) + len(item_keywords) + 1e-6
         )
-        try:
-            context_text = extract_contextual_description(desc, generate_response)
-            desc_words = set(context_text.lower().split())
-            print(f"[DEBUG] Context extracted: '{context_text}'")
-            print(f"[DEBUG] original desc: '{desc}'")
 
-        # --- 2️⃣ Extract words from that context ---
-            q_words = set(query_text.lower().split())
-            type_overlap = len(desc_words & q_words) / (len(q_words) + 1e-6)
-        except Exception:
-            type_overlap = 0.0
+        desc_words = set(context_text.lower().split())
+        q_words = set(query_text.lower().split())
+        type_overlap = len(desc_words & q_words) / (len(q_words) + 1e-6)
 
+        # 4️⃣ Weighted hybrid score
         hybrid_score = (
             semantic_weight * semantic_score
             + keyword_weight * keyword_overlap
             + type_weight * type_overlap
         )
+
         scored.append(
             {
                 "item_id": iid,
                 "description": desc,
+                "context_used": context_text,
                 "score": hybrid_score,
                 "semantic_score": semantic_score,
                 "keyword_overlap": keyword_overlap,
@@ -160,6 +188,7 @@ def hybrid_retrieve_v2(
 
     scored.sort(key=lambda x: x["score"], reverse=True)
     return scored[:top_k]
+
 
 
 # ---------------------------------------------------------------------
@@ -192,7 +221,6 @@ def retrieve_relevant_items_from_text(recommendation_text: str, user_query: str,
         print(f"[DEBUG] Extraction model failed → {e}")
         extracted_item = ""
 
-    print(f"[DEBUG] Qwen extraction prompt → '{extraction_prompt}'")
     print(f"[DEBUG] Qwen-extracted item raw → '{extracted_item}'")    
     if not extracted_item:
         extracted_item = recommendation_text.strip().split('.')[0]  # fallback
@@ -201,7 +229,7 @@ def retrieve_relevant_items_from_text(recommendation_text: str, user_query: str,
 
     # Step 2 — Query RAG with that extracted phrase
     query_text = extracted_item
-    results = hybrid_retrieve_v2(query_text, top_k=max(15, top_k * 3), generate_response=generate_response)
+    results = hybrid_retrieve_v2(query_text, top_k=10, generate_response=generate_response)
 
     print(f"[DEBUG] RAG queried for → '{query_text}'")
     print(f"[DEBUG] Retrieved {len(results)} candidate items")
