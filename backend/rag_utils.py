@@ -26,6 +26,8 @@ _collection = None
 _embedding_model = None
 _tfidf_vectorizer = None
 _image_store = None
+import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
 
 from transformers import AutoTokenizer
 
@@ -164,11 +166,14 @@ def hybrid_retrieve_v2(
         # 2️⃣ Compute new semantic score using context embedding
         context_embedding = _embedding_model.encode(context_text).tolist()
         # cosine similarity = 1 - distance
-        semantic_score = 1.0 - float(
-            _embedding_model.similarity(query_embedding, context_embedding)
-            if hasattr(_embedding_model, "similarity")
-            else semantic_results["distances"][0][idx]          
-        )
+        try:
+            context_embedding = _embedding_model.encode(context_text).reshape(1, -1)
+            query_embedding_np = np.array(query_embedding).reshape(1, -1)
+            semantic_score = float(cosine_similarity(query_embedding_np, context_embedding)[0][0])
+
+        except Exception as e:
+            print(f"[WARN] Semantic recompute failed: {e}")
+            semantic_score = 1.0 - semantic_results["distances"][0][idx]
 
         # 3️⃣ Keyword and type overlap scores
         item_keywords = set((meta or {}).get("keywords", "").split(","))
