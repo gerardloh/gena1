@@ -16,7 +16,7 @@ from typing import List, Dict, Any
 from sentence_transformers import SentenceTransformer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from PIL import Image, ImageChops, ImageOps
-
+import re
 
 # ---------------------------------------------------------------------
 # Globals
@@ -100,11 +100,21 @@ def hybrid_retrieve_v2(
             len(query_keywords) + len(item_keywords) + 1e-6
         )
         try:
-            desc_words = set(desc.lower().split(",")[0].split())
+            desc_lower = desc.lower()
+        # --- 1️⃣ Split sentence around “recommend” to isolate non-recommendation parts ---
+            if "recommend" in desc_lower:
+                parts = re.sub(r"\b(?:i\s+recommend|recommend(?:ing)?|recommended)\b[^.]*?(?=\b(because|to|for|with)\b|[.!?,]|$)","",desc_lower,flags=re.IGNORECASE,)
+                # Prefer the parts BEFORE "recommend" (context) and AFTER it (reasoning)
+                pre_context = parts[0].strip() if len(parts) > 0 else ""
+                post_context = parts[1].strip() if len(parts) > 1 else ""
+                context_text = (pre_context + " " + post_context).strip()
+            else:
+                context_text = desc_lower
+        # --- 2️⃣ Extract words from that context ---
             q_words = set(query_text.lower().split())
-
-            print(f"[DEBUG] Desc words: {desc_words}, Q words: {q_words}")
-            type_overlap = len(desc_words & q_words) / (len(q_words) + 1e-6)
+            context_text = set(context_text.split())
+            print(f"[DEBUG] Desc words: {context_text}, Q words: {q_words}")
+            type_overlap = len(context_text & q_words) / (len(q_words) + 1e-6)
         except Exception:
             type_overlap = 0.0
 
