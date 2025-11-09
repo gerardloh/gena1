@@ -100,7 +100,7 @@ def hybrid_retrieve_v2(
             len(query_keywords) + len(item_keywords) + 1e-6
         )
         try:
-            desc_words = set(desc.lower().split())
+            desc_words = set(desc.lower().split(",")[0].split())
             q_words = set(query_text.lower().split())
             type_overlap = len(desc_words & q_words) / (len(q_words) + 1e-6)
         except Exception:
