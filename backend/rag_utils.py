@@ -126,7 +126,7 @@ def hybrid_retrieve_v2(
     query_embedding = _embedding_model.encode(query_text).tolist()
     # Fetch a larger pool for reranking
     semantic_results = _collection.query(query_embeddings=[query_embedding], n_results=top_k * 3)
-    query_keywords = {query_text.lower().split()}
+    query_keywords = {w for w in query_text.lower().split()}
 
     scored = []
     for idx, (iid, desc, meta) in enumerate(
