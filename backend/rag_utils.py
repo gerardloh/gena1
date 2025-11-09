@@ -139,7 +139,7 @@ def hybrid_retrieve_v2(
         # 1️⃣ Extract only contextual (non-recommendation) text
         try:
             context_text = extract_contextual_description(desc, generate_response)
-            if not context_text or len(context_text.strip()) > 15:
+            if not context_text:
                 context_text = desc  # fallback
         except Exception as e:
             print(f"[WARN] Context extraction failed: {e}")
@@ -152,7 +152,9 @@ def hybrid_retrieve_v2(
         context_embedding = _embedding_model.encode(context_text).tolist()
         # cosine similarity = 1 - distance
         semantic_score = 1.0 - float(
-            chromadb.utils.distance.cosine_distance(query_embedding, context_embedding)            
+            _embedding_model.similarity(query_embedding, context_embedding)
+            if hasattr(_embedding_model, "similarity")
+            else semantic_results["distances"][0][idx]          
         )
 
         # 3️⃣ Keyword and type overlap scores
