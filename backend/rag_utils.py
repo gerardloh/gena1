@@ -126,7 +126,7 @@ def hybrid_retrieve_v2(
     query_embedding = _embedding_model.encode(query_text).tolist()
     # Fetch a larger pool for reranking
     semantic_results = _collection.query(query_embeddings=[query_embedding], n_results=top_k * 3)
-    query_keywords = {w for w in query_text.lower().split() if len(w) > 3}
+    query_keywords = query_text.lower().split()
 
     scored = []
     for idx, (iid, desc, meta) in enumerate(
@@ -139,7 +139,7 @@ def hybrid_retrieve_v2(
         # 1️⃣ Extract only contextual (non-recommendation) text
         try:
             context_text = extract_contextual_description(desc, generate_response)
-            if not context_text or len(context_text.strip()) < 5:
+            if not context_text or len(context_text.strip()) > 15:
                 context_text = desc  # fallback
         except Exception as e:
             print(f"[WARN] Context extraction failed: {e}")
@@ -152,9 +152,7 @@ def hybrid_retrieve_v2(
         context_embedding = _embedding_model.encode(context_text).tolist()
         # cosine similarity = 1 - distance
         semantic_score = 1.0 - float(
-            _embedding_model.similarity(query_embedding, context_embedding)
-            if hasattr(_embedding_model, "similarity")
-            else semantic_results["distances"][0][idx]
+            chromadb.utils.distance.cosine_distance(query_embedding, context_embedding)            
         )
 
         # 3️⃣ Keyword and type overlap scores
@@ -229,7 +227,7 @@ def retrieve_relevant_items_from_text(recommendation_text: str, user_query: str,
 
     # Step 2 — Query RAG with that extracted phrase
     query_text = extracted_item
-    results = hybrid_retrieve_v2(query_text, top_k=10, generate_response=generate_response)
+    results = hybrid_retrieve_v2(query_text, top_k=3, generate_response=generate_response)
 
     print(f"[DEBUG] RAG queried for → '{query_text}'")
     print(f"[DEBUG] Retrieved {len(results)} candidate items")
