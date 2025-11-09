@@ -144,11 +144,11 @@ def retrieve_relevant_items_from_text(recommendation_text: str, user_query: str,
     # Step 1 — Ask Qwen to extract the item it recommended
     extraction_prompt = f"""Given this fashion recommendation, extract ONLY the item being RECOMMENDED (suggested), NOT the user's item.
 
-User Query: "{user_query}"
-Recommendation: "{recommendation_text}"
+        User Query: "{user_query}"
+        Recommendation: "{recommendation_text}"
 
-What specific item is being RECOMMENDED? (answer with only the item name, e.g., "blue denim jacket" or "leather boots")
-Recommended item:"""
+        What specific item is being RECOMMENDED? (answer with only the item name, e.g., "blue denim jacket" or "leather boots")
+        Recommended item:"""
 
     try:
         extracted_item = generate_response(extraction_prompt, None, TEMPERATURE=0.1).strip()
@@ -156,6 +156,8 @@ Recommended item:"""
         print(f"[DEBUG] Extraction model failed → {e}")
         extracted_item = ""
 
+    print(f"[DEBUG] Qwen extraction prompt → '{extraction_prompt}'")
+    print(f"[DEBUG] Qwen-extracted item raw → '{extracted_item}'")    
     if not extracted_item:
         extracted_item = recommendation_text.strip().split('.')[0]  # fallback
 
