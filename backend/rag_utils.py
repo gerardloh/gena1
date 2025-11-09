@@ -79,22 +79,35 @@ def extract_contextual_description(description: str, generate_response) -> str:
     prompt = f"""
     The following sentence contains a fashion recommendation.
     Your task is to extract only the CONTEXT — the part describing the user's existing outfit or
-    what the recommendation is based on. Exclude the item being recommended.
+    what the recommendation is based on. Exclude the item being recommended. Keep output concise.
 
     Example 1:
     Sentence: "I recommend black stiletto heels to complement your black dress."
-    Output: "to complement your black dress."
+    Output: "black dress."
 
     Example 2:
     Sentence: "For your white blouse and black skirt, I recommend heels."
-    Output: "for your white blouse and black skirt."
+    Output: "white blouse and black skirt."
 
     Example 3:
     Sentence: "Pairing your beige coat with a red scarf will look great."
-    Output: "your beige coat"
+    Output: "beige coat"
 
+    Example 3:
+    Sentence: "Those high-top sneakers are a versatile choice! I suggest pairing them with a chic cross-body bag for a trendy look. A black quilted bag would perfectly complement the color scheme of your shoes"
+    Output: "high-top sneakers"
+    
+    Example 3:
+    Sentence: "Those shiny black high-top sneakers would pair perfectly with some denim shorts. The faded blue material with frayed hems will create a relaxed and trendy contrast with the sleek design of your sneakers"
+    Output: "black high-top sneakers"
+
+    Example 3:
+    Sentence: "Since you're wearing those sleek all-black high-top sneakers, I recommend pairing them with an off-the-shoulder, long-sleeved t-shirt that has horizontal navy blue stripes on a white base. The fitted silhouette will complement the sporty vibe of your sneakers perfectly"
+    Output: "black high-top sneakers"
+
+
+    Now extract the context from this sentence:
     Sentence: "{description}"
-    Output:
     """
     try:
         context = generate_response(prompt, None, TEMPERATURE=0.1).strip()
@@ -207,13 +220,29 @@ def retrieve_relevant_items_from_text(recommendation_text: str, user_query: str,
     print("==============================")
 
     # Step 1 — Ask Qwen to extract the item it recommended
-    extraction_prompt = f"""Given this fashion recommendation, extract ONLY the item being RECOMMENDED (suggested), NOT the user's item.
+    extraction_prompt = f"""
+        You are a precise information extractor. 
+        Given a FASHION RECOMMENDATION, identify **only the item that is being RECOMMENDED** (the suggested product), 
+        not the user's current item or outfit.
 
-        User Query: "{user_query}"
-        Recommendation: "{recommendation_text}"
+        Follow these rules:
+        1. Focus on the item being suggested, not what the user already has.
+        2. Output must be short (just a few words, no sentences).
+        3. Do NOT include colors, materials, or adjectives unless they are part of the product name itself.
+        4. Do NOT include explanations, phrases like "I recommend" or "pair it with".
+        5. Return only the recommended item's name (e.g. "black leather heels", "denim jacket", "ankle boots").
 
-        What specific item is being RECOMMENDED? (answer with only the item name, e.g., "blue denim jacket" or "leather boots")
-        Recommended item:"""
+        ---
+
+        **User Query:** {user_query}
+        **Model Recommendation:** {recommendation_text}
+
+        ---
+
+        Extract the recommended item below (no punctuation, no quotes, no extra text):
+        Recommended item:
+"""
+
 
     try:
         extracted_item = generate_response(extraction_prompt, None, TEMPERATURE=0.1).strip()
