@@ -54,12 +54,23 @@ fi
 # Check if port 5000 is already in use
 echo ""
 echo "🔍 Checking if port 5000 is available..."
-if lsof -Pi :5000 -sTCP:LISTEN -t >/dev/null 2>&1 ; then
-    echo "⚠️  Port 5000 is in use. Killing existing process..."
-    kill -9 $(lsof -t -i:5000) 2>/dev/null || true
-    sleep 2
+if command -v fuser &> /dev/null; then
+    echo "Using fuser to check port..."
+    fuser -k 5000/tcp 2>/dev/null && echo "✓ Killed existing process on port 5000" || echo "✓ Port 5000 is free"
+elif command -v lsof &> /dev/null; then
+    echo "Using lsof to check port..."
+    if lsof -Pi :5000 -sTCP:LISTEN -t >/dev/null 2>&1 ; then
+        echo "⚠️  Port 5000 is in use. Killing existing process..."
+        kill -9 $(lsof -t -i:5000) 2>/dev/null || true
+        sleep 2
+    fi
+    echo "✅ Port 5000 is available"
+else
+    echo "⚠️  Cannot check port (fuser/lsof not available)"
+    echo "   If you get 'Address in use', manually kill old jobs with: scancel <JOBID>"
 fi
-echo "✅ Port 5000 is available"
+
+sleep 1
 
 echo ""
 echo "=================================================="
