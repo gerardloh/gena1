@@ -54,14 +54,14 @@ fi
 
 echo ""
 echo "=================================================="
-echo "Starting Flask API server on port 5003..."
+echo "Starting Flask API server on port 5000..."
 echo "=================================================="
 echo ""
 
 # Get the node's IP address
 NODE_IP=$(hostname -I | awk '{print $1}')
-echo "Server will be accessible at: http://$NODE_IP:5003"
-echo "API endpoint: http://$NODE_IP:5003/chat"
+echo "Server will be accessible at: http://$NODE_IP:5000"
+echo "API endpoint: http://$NODE_IP:5000/chat"
 echo ""
 
 # Run the Flask server
