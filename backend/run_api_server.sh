@@ -80,14 +80,17 @@ echo ""
 
 # Get the node's IP address
 NODE_IP=$(hostname -I | awk '{print $1}')
-echo "Server will be accessible at: http://$NODE_IP:5000"
-echo "API endpoint: http://$NODE_IP:5000/chat"
+echo "Server will try ports 5000-5010 to find an available one"
+echo "Check the logs to see which port was selected"
+echo "API will be at: http://$NODE_IP:<PORT>/chat"
 echo ""
 
 # Run the Flask server
 python3 backend_api.py
 
+# After server stops, show which port it used
 echo ""
 echo "=================================================="
 echo "Server stopped at: $(date)"
+echo "Check logs above to see which port was used"
 echo "=================================================="

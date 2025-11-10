@@ -372,8 +372,37 @@ if __name__ == '__main__':
     
     if load_model_and_processor():
         logger.info("Model loaded successfully. Starting server...")
+        
+        # Try ports 5000-5010 to find an available one
+        import socket
+        port = 5000
+        for try_port in range(5000, 5011):
+            try:
+                # Test if port is available
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(1)
+                result = sock.connect_ex(('0.0.0.0', try_port))
+                sock.close()
+                
+                if result != 0:  # Port is available
+                    port = try_port
+                    logger.info(f"✓ Port {port} is available")
+                    break
+                else:
+                    logger.warning(f"Port {try_port} is in use, trying next...")
+            except Exception as e:
+                logger.warning(f"Error checking port {try_port}: {e}")
+                continue
+        
         # Run on all interfaces so it's accessible from other machines
-        app.run(host='0.0.0.0', port=5000, debug=False)
+        try:
+            logger.info(f"Starting server on port {port}...")
+            app.run(host='0.0.0.0', port=port, debug=False)
+        except OSError as e:
+            logger.error(f"Failed to start server on port {port}: {e}")
+            logger.error("All ports 5000-5010 appear to be in use.")
+            logger.error("Please kill old processes or wait a few minutes.")
+            exit(1)
     else:
         logger.error("Failed to load model. Server not started.")
         exit(1)
