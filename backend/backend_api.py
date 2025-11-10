@@ -280,14 +280,18 @@ def chat():
         text_input = data['message'].strip()
         image_input = None
 
+        
         # Optional user image
         if 'image' in data and data['image']:
+            print("Decoding user image...")
+            print(data['image'][:30])  # Print first 30 chars for debugging
             try:
                 image_data = data['image']
                 if 'base64,' in image_data:
                     image_data = image_data.split('base64,')[1]
                 image_bytes = base64.b64decode(image_data)
                 image_input = Image.open(io.BytesIO(image_bytes)).convert('RGB')
+                print(f"Decoded image size: {image_input.size}")
             except Exception as e:
                 logger.error(f"Error decoding image: {e}")
 

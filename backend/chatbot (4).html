@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Qwen2.5-VL Chatbot</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Oxygen, Ubuntu, Cantarell, sans-serif;
+      }
+      .chat-container {
+        height: calc(100vh - 180px);
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .spinner {
+        animation: spin 1s linear infinite;
+      }
+    </style>
+  </head>
+  <body class="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <!-- Header -->
+    <div
+      class="bg-slate-800/50 backdrop-blur-lg border-b border-purple-500/20 p-4 shadow-lg">
+      <div class="max-w-4xl mx-auto flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div
+            class="bg-gradient-to-br from-purple-500 to-pink-500 p-2 rounded-lg">
+            <svg
+              class="w-6 h-6 text-white"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-xl font-bold text-white">Qwen2.5-VL Chatbot</h1>
+            <p class="text-sm text-purple-300">
+              Vision + Language AI Assistant
+            </p>
+          </div>
+        </div>
+
+        <button
+          onclick="toggleSettings()"
+          class="p-2 hover:bg-slate-700/50 rounded-lg transition-colors">
+          <svg
+            class="w-5 h-5 text-purple-300"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Settings Panel -->
+    <div
+      id="settingsPanel"
+      class="hidden bg-slate-800/90 backdrop-blur-lg border-b border-purple-500/20 p-4">
+      <div class="max-w-4xl mx-auto">
+        <h3 class="text-white font-semibold mb-3">Settings</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label class="text-sm text-purple-300 block mb-1">API URL</label>
+            <input
+              type="text"
+              id="apiUrl"
+              value="http://localhost:5000"
+              class="w-full px-3 py-2 bg-slate-700/50 border border-purple-500/20 rounded-lg text-white text-sm" />
+          </div>
+          <div>
+            <label class="text-sm text-purple-300 block mb-1">Max Tokens</label>
+            <input
+              type="number"
+              id="maxTokens"
+              value="512"
+              class="w-full px-3 py-2 bg-slate-700/50 border border-purple-500/20 rounded-lg text-white text-sm" />
+          </div>
+          <div>
+            <label class="text-sm text-purple-300 block mb-1"
+              >Temperature</label
+            >
+            <input
+              type="number"
+              id="temperature"
+              value="0.7"
+              step="0.1"
+              min="0"
+              max="2"
+              class="w-full px-3 py-2 bg-slate-700/50 border border-purple-500/20 rounded-lg text-white text-sm" />
+          </div>
+        </div>
+        <button
+          onclick="updateConfig()"
+          class="mt-3 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm transition-colors">
+          Save Settings
+        </button>
+      </div>
+    </div>
+
+    <!-- Chat Messages -->
+    <div id="chatContainer" class="chat-container overflow-y-auto p-4">
+      <div class="max-w-4xl mx-auto" id="messagesContainer">
+        <!-- Welcome Message -->
+        <div id="welcomeMessage" class="text-center py-12">
+          <div
+            class="inline-block bg-gradient-to-br from-purple-500 to-pink-500 p-4 rounded-2xl mb-4">
+            <svg
+              class="w-12 h-12 text-white"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+          </div>
+          <h2 class="text-2xl font-bold text-white mb-2">
+            Welcome to Qwen2.5-VL Chat
+          </h2>
+          <p class="text-purple-300">
+            Send a message or upload an image to get started!
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Input Area -->
+    <div
+      class="bg-slate-800/50 backdrop-blur-lg border-t border-purple-500/20 p-4">
+      <div class="max-w-4xl mx-auto">
+        <!-- Image Preview -->
+        <div id="imagePreviewContainer" class="mb-3 hidden">
+          <div class="relative inline-block">
+            <img
+              id="imagePreview"
+              src=""
+              alt="Preview"
+              class="h-24 rounded-lg border-2 border-purple-500/50" />
+            <button
+              onclick="removeImage()"
+              class="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 transition-colors">
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Input Box -->
+        <div class="flex gap-2">
+          <input
+            type="file"
+            id="fileInput"
+            accept="image/*"
+            class="hidden"
+            onchange="handleImageUpload(event)" />
+
+          <button
+            onclick="document.getElementById('fileInput').click()"
+            class="p-3 bg-slate-700/50 hover:bg-slate-700 border border-purple-500/20 rounded-xl transition-colors"
+            title="Upload image">
+            <svg
+              class="w-5 h-5 text-purple-300"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+          </button>
+
+          <textarea
+            id="messageInput"
+            placeholder="Type your message here... (Shift+Enter for new line)"
+            class="flex-1 px-4 py-3 bg-slate-700/50 border border-purple-500/20 rounded-xl text-white placeholder-purple-300/50 resize-none focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+            rows="1"
+            onkeydown="handleKeyPress(event)"></textarea>
+
+          <button
+            onclick="sendMessage()"
+            id="sendButton"
+            class="p-3 bg-gradient-to-br from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-xl transition-all"
+            title="Send message">
+            <svg
+              class="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+            </svg>
+          </button>
+        </div>
+
+        <p class="text-xs text-purple-400 mt-2 text-center">
+          Powered by Qwen2.5-VL with your custom LoRA adapters
+        </p>
+      </div>
+    </div>
+
+    <script>
+      let uploadedImage = null;
+      let isLoading = false;
+
+      function toggleSettings() {
+        const panel = document.getElementById("settingsPanel");
+        panel.classList.toggle("hidden");
+      }
+
+      function handleImageUpload(event) {
+        const file = event.target.files[0];
+        if (file && file.type.startsWith("image/")) {
+          // Resize image before uploading to prevent GPU OOM
+          const reader = new FileReader();
+          reader.onload = function (e) {
+            const img = new Image();
+            img.onload = function () {
+              // Resize to max 1024px on longest side
+              const maxSize = 1024;
+              let width = img.width;
+              let height = img.height;
+
+              if (width > height && width > maxSize) {
+                height = (height * maxSize) / width;
+                width = maxSize;
+              } else if (height > maxSize) {
+                width = (width * maxSize) / height;
+                height = maxSize;
+              }
+
+              // Create canvas and resize
+              const canvas = document.createElement("canvas");
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext("2d");
+              ctx.drawImage(img, 0, 0, width, height);
+
+              // Convert to base64
+              uploadedImage = canvas.toDataURL("image/jpeg", 0.85);
+              document.getElementById("imagePreview").src = uploadedImage;
+              document
+                .getElementById("imagePreviewContainer")
+                .classList.remove("hidden");
+
+              console.log(`Image resized to ${width}x${height}`);
+            };
+            img.src = e.target.result;
+          };
+          reader.readAsDataURL(file);
+        }
+      }
+
+      function removeImage() {
+        uploadedImage = null;
+        document.getElementById("imagePreview").src = "";
+        document
+          .getElementById("imagePreviewContainer")
+          .classList.add("hidden");
+        document.getElementById("fileInput").value = "";
+      }
+
+      function addMessage(role, content, imageUris = []) {
+        const container = document.getElementById("messagesContainer");
+        document.getElementById("welcomeMessage")?.remove();
+
+        const messageDiv = document.createElement("div");
+        messageDiv.className = `flex ${
+          role === "user" ? "justify-end" : "justify-start"
+        } mb-4`;
+
+        const bgColor =
+          role === "user"
+            ? "bg-gradient-to-br from-purple-600 to-pink-600 text-white"
+            : role === "system"
+            ? "bg-red-900/50 border border-red-500/20 text-red-200"
+            : "bg-slate-800/50 backdrop-blur-lg border border-purple-500/20 text-white";
+
+        const timestamp = new Date().toLocaleTimeString();
+        const textColor =
+          role === "user" ? "text-purple-200" : "text-purple-400";
+
+        // ✅ create a block to hold images if any
+        let imageHtml = "";
+        if (Array.isArray(imageUris) && imageUris.length > 0) {
+          const images = imageUris
+            .map(
+              (uri) => `
+        <img src="${uri}" 
+             class="max-w-[180px] max-h-[180px] rounded-xl object-cover shadow-md hover:scale-[1.05] transition-transform duration-150 ease-in-out" 
+             alt="RAG Image" />
+      `
+            )
+            .join("");
+          imageHtml = `
+      <div class="flex flex-wrap gap-3 justify-start mt-3">
+        ${images}
+      </div>
+    `;
+        }
+
+        messageDiv.innerHTML = `
+    <div class="max-w-[80%] rounded-2xl p-4 ${bgColor}">
+        ${
+          content
+            ? `<p class="whitespace-pre-wrap break-words">${escapeHtml(
+                content
+              )}</p>`
+            : ""
+        }
+        ${imageHtml}
+        <p class="text-xs mt-2 ${textColor}">${timestamp}</p>
+    </div>
+  `;
+
+        container.appendChild(messageDiv);
+        scrollToBottom();
+      }
+
+      function addLoadingIndicator() {
+        const container = document.getElementById("messagesContainer");
+        const loadingDiv = document.createElement("div");
+        loadingDiv.id = "loadingIndicator";
+        loadingDiv.className = "flex justify-start mb-4";
+        loadingDiv.innerHTML = `
+                <div class="bg-slate-800/50 backdrop-blur-lg border border-purple-500/20 rounded-2xl p-4">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-5 h-5 text-purple-400 spinner" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                        <span class="text-purple-300">Thinking...</span>
+                    </div>
+                </div>
+            `;
+        container.appendChild(loadingDiv);
+        scrollToBottom();
+      }
+
+      function removeLoadingIndicator() {
+        document.getElementById("loadingIndicator")?.remove();
+      }
+
+      async function sendMessage() {
+        if (isLoading) return;
+
+        const input = document.getElementById("messageInput");
+        const text = input.value.trim();
+
+        if (!text && !uploadedImage) return;
+
+        isLoading = true;
+        document.getElementById("sendButton").disabled = true;
+
+        // Add user message
+        addMessage("user", text, uploadedImage);
+
+        // Clear input
+        const textToSend = text;
+        const imageToSend = uploadedImage;
+        input.value = "";
+        removeImage();
+
+        // Show loading
+        addLoadingIndicator();
+
+        try {
+          const apiUrl = document.getElementById("apiUrl").value;
+          const response = await fetch(`${apiUrl}/chat`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: textToSend, image: imageToSend }),
+          });
+
+          const data = await response.json();
+          removeLoadingIndicator();
+
+          if (data.error) {
+            addMessage("system", data.error);
+            return;
+          }
+
+          if (data.text) {
+            addMessage("assistant", data.text);
+          }
+
+          console.log(data);
+          if (data.image && Array.isArray(data.image)) {
+            addMessage("assistant", "", data.image);
+          }
+        } catch (error) {
+          console.error("Error:", error);
+          removeLoadingIndicator();
+          addMessage(
+            "system",
+            `Error: Unable to connect to server. Make sure the backend API is running at ${
+              document.getElementById("apiUrl").value
+            }`
+          );
+        } finally {
+          isLoading = false;
+          document.getElementById("sendButton").disabled = false;
+        }
+      }
+
+      function handleKeyPress(event) {
+        if (event.key === "Enter" && !event.shiftKey) {
+          event.preventDefault();
+          sendMessage();
+        }
+      }
+
+      async function updateConfig() {
+        try {
+          const apiUrl = document.getElementById("apiUrl").value;
+          const response = await fetch(`${apiUrl}/config`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              max_new_tokens: parseInt(
+                document.getElementById("maxTokens").value
+              ),
+              temperature: parseFloat(
+                document.getElementById("temperature").value
+              ),
+              top_p: 0.9,
+            }),
+          });
+
+          if (response.ok) {
+            alert("Configuration updated successfully!");
+            toggleSettings();
+          } else {
+            alert("Failed to update configuration");
+          }
+        } catch (error) {
+          alert("Failed to update configuration: " + error.message);
+        }
+      }
+
+      function scrollToBottom() {
+        const container = document.getElementById("chatContainer");
+        container.scrollTop = container.scrollHeight;
+      }
+
+      function escapeHtml(text) {
+        const div = document.createElement("div");
+        div.textContent = text;
+        return div.innerHTML;
+      }
+    </script>
+  </body>
+</html>
