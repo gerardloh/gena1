@@ -373,7 +373,7 @@ if __name__ == '__main__':
     if load_model_and_processor():
         logger.info("Model loaded successfully. Starting server...")
         # Run on all interfaces so it's accessible from other machines
-        app.run(host='0.0.0.0', port=5003, debug=False)
+        app.run(host='0.0.0.0', port=5000, debug=False)
     else:
         logger.error("Failed to load model. Server not started.")
         exit(1)
