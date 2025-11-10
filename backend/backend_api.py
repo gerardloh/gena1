@@ -249,9 +249,9 @@ def make_rag_card(text: str, user_img: Image.Image, rag_imgs: list) -> Image.Ima
 
 
 
-    # Paste up to 3 RAG images on the right
+    # Paste up to 6 RAG images on the right
     y_offset = 120
-    for i, img in enumerate(rag_imgs[:3]):
+    for i, img in enumerate(rag_imgs[:6]):
         if img:
             thumb = img.copy()
             thumb.thumbnail((250, 250))
