@@ -60,8 +60,8 @@ echo ""
 
 # Get the node's IP address
 NODE_IP=$(hostname -I | awk '{print $1}')
-echo "Server will be accessible at: http://$NODE_IP:5000"
-echo "API endpoint: http://$NODE_IP:5000/chat"
+echo "Server will be accessible at: http://$NODE_IP:5001"
+echo "API endpoint: http://$NODE_IP:5001/chat"
 echo ""
 
 # Run the Flask server
