@@ -297,6 +297,7 @@ def chat():
 
 
         # Step 2 — Generate fashion recommendation
+        print(f"Image input: {image_input}")
         recommendation = generate_response(text_input, image_input)
         logger.info(f"Model recommendation: {recommendation}")
 
