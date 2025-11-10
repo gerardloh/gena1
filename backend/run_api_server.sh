@@ -48,9 +48,18 @@ if [ -d "$DB_PATH" ] && [ -f "$IMAGE_STORE" ]; then
     echo "✅ RAG database already exists. Skipping build."
 else
     echo "⚙️  RAG database not found. Building now..."
-    python build_fashion_rag_db.py
+    python3 build_fashion_rag.py
 fi
 
+# Check if port 5000 is already in use
+echo ""
+echo "🔍 Checking if port 5000 is available..."
+if lsof -Pi :5000 -sTCP:LISTEN -t >/dev/null 2>&1 ; then
+    echo "⚠️  Port 5000 is in use. Killing existing process..."
+    kill -9 $(lsof -t -i:5000) 2>/dev/null || true
+    sleep 2
+fi
+echo "✅ Port 5000 is available"
 
 echo ""
 echo "=================================================="
