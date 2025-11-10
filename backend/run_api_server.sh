@@ -54,7 +54,7 @@ fi
 
 echo ""
 echo "=================================================="
-echo "Starting Flask API server on port 5000..."
+echo "Starting Flask API server on port 5001..."
 echo "=================================================="
 echo ""
 
