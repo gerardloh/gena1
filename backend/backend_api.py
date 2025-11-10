@@ -171,6 +171,8 @@ def generate_response(text_input, image_input=None, TEMPERATURE=TEMPERATURE):
             tokenize=False,
             add_generation_prompt=True
         )
+        logger.debug("Rendered prompt (truncated): %s", text[:400])
+
         
         # Process inputs
         if image_input is not None:
@@ -186,10 +188,13 @@ def generate_response(text_input, image_input=None, TEMPERATURE=TEMPERATURE):
                 return_tensors="pt",
                 padding=True
             )
-        
+
+        logger.info("Processor output keys: %s", list(inputs.keys()))
         # Move to device
         inputs = {k: v.to(model.device) for k, v in inputs.items()}
-        
+        if image_input is not None and not any(k for k in inputs if "pixel" in k or "vision" in k):
+            logger.warning("No vision tensor keys detected; image may be ignored.")
+
         # Generate with memory-efficient settings
         with torch.no_grad():
             outputs = model.generate(
@@ -283,22 +288,29 @@ def chat():
         
         # Optional user image
         if 'image' in data and data['image']:
-            print("Decoding user image...")
-            print(data['image'][:30])  # Print first 30 chars for debugging
+            raw = data['image']
+            logger.info("Incoming image (first 50 chars): %s", raw[:50])
             try:
-                image_data = data['image']
-                if 'base64,' in image_data:
-                    image_data = image_data.split('base64,')[1]
-                image_bytes = base64.b64decode(image_data)
-                image_input = Image.open(io.BytesIO(image_bytes)).convert('RGB')
-                print(f"Decoded image size: {image_input.size}")
+                image_data = raw.split('base64,')[-1].strip()
+                # Clean potential URL-safe base64 issues
+                image_data = image_data.replace(' ', '+')
+                decoded = base64.b64decode(image_data)
+                if len(decoded) < 32:
+                    raise ValueError("Decoded image too small; likely bad base64.")
+                image_input = Image.open(io.BytesIO(decoded))
+                if image_input.mode != "RGB":
+                    image_input = image_input.convert("RGB")
+                logger.info("Decoded image size=%s mode=%s", image_input.size, image_input.mode)
             except Exception as e:
-                logger.error(f"Error decoding image: {e}")
+                logger.error("Image decode failed: %s", e)
+                image_input = None
 
+        # Debug: confirm we will run vision path
+        logger.info("Vision enabled: %s", image_input is not None)
 
         # Step 2 — Generate fashion recommendation
-        print(f"Image input: {image_input}")
         recommendation = generate_response(text_input, image_input)
+
         logger.info(f"Model recommendation: {recommendation}")
 
         # Step 3 — Retrieve relevant item images
