@@ -319,8 +319,11 @@ def chat():
 
         # Step 4 — Create composite image (only visuals, no text)
         if rag_images:
-            from io import BytesIO
-            import base64
+            # NOTE: Removed inner `import base64` and `from io import BytesIO`.
+            # Having `import base64` here makes `base64` a local variable for the
+            # entire function scope, causing an UnboundLocalError earlier when
+            # `base64.b64decode` is first used during image decode. We already
+            # import these at the module level.
 
             image_uris = []
             for img in rag_images:
